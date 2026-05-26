@@ -1,9 +1,15 @@
 // Typed client for the Abroadly backend.
-// In Phase 2+ this can be auto-generated from /openapi.json.
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_API_BASE ||
+  "http://localhost:8000";
 
+// ---------------------------------------------------------------------------
+// Shared types
+// ---------------------------------------------------------------------------
 export type EducationLevel = "plus_two" | "a_levels" | "bba" | "bachelors" | "other";
+export type Decision = "proceed" | "low_confidence" | "out_of_scope" | "escalate";
 
 export interface StudentCreate {
   full_name: string;
@@ -17,46 +23,112 @@ export interface StudentCreate {
   preferred_field?: string;
 }
 
-export interface StudentOut extends StudentCreate {
+export interface StudentOut {
   id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  location: string | null;
+  education_level: EducationLevel;
+  gpa: number | null;
+  target_countries: string[];
+  goals: string | null;
+  preferred_field: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type Decision = "proceed" | "low_confidence" | "out_of_scope" | "escalate";
+export interface ChatSource {
+  chunk_id: string;
+  source_type: string;
+  score: number;
+  title: string | null;
+}
 
 export interface ChatResponse {
+  request_id: string;
+  trace_id: string;
   decision: Decision;
-  answer?: string | null;
-  clarifying_question?: string | null;
-  sources: Array<{ title: string; reference?: string | null; score: number }>;
+  confidence: number;
+  answer: string | null;
+  clarifying_question: string | null;
+  clarification_needed: boolean;
+  sources: ChatSource[];
   reason: string;
 }
 
-async function j<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+export interface UploadResponse {
+  filename: string;
+  message: string;
+}
+
+// ---------------------------------------------------------------------------
+// Error type
+// ---------------------------------------------------------------------------
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+    this.name = "ApiError";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+async function handle<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new ApiError(res.status, text);
+  }
   return res.json() as Promise<T>;
 }
 
+// ---------------------------------------------------------------------------
+// API functions
+// ---------------------------------------------------------------------------
 export async function createStudent(payload: StudentCreate): Promise<StudentOut> {
-  return j(await fetch(`${BASE}/students`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  }));
+  return handle<StudentOut>(
+    await fetch(`${BASE}/students`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+  );
 }
 
-export async function sendChat(payload: { student_id: string; message: string }): Promise<ChatResponse> {
-  return j(await fetch(`${BASE}/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  }));
+export async function getStudent(id: string): Promise<StudentOut> {
+  return handle<StudentOut>(await fetch(`${BASE}/students/${id}`));
 }
 
-export async function uploadDoc(studentId: string, file: File) {
+export async function chat(
+  student_id: string,
+  message: string,
+  trace_id?: string
+): Promise<ChatResponse> {
+  return handle<ChatResponse>(
+    await fetch(`${BASE}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id, message, trace_id }),
+    })
+  );
+}
+
+export async function uploadFile(
+  student_id: string,
+  file: File
+): Promise<UploadResponse> {
   const fd = new FormData();
-  fd.append("student_id", studentId);
+  fd.append("student_id", student_id);
   fd.append("file", file);
-  return j(await fetch(`${BASE}/upload`, { method: "POST", body: fd }));
+  return handle<UploadResponse>(
+    await fetch(`${BASE}/upload`, { method: "POST", body: fd })
+  );
 }
+
+// Keep old names for backward compat with existing stubs
+export const sendChat = (payload: { student_id: string; message: string }) =>
+  chat(payload.student_id, payload.message);
+export const uploadDoc = uploadFile;

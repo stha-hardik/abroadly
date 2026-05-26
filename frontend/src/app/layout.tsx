@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Abroadly",
-  description: "AI guidance for Nepali students considering study abroad.",
+  description: "AI-powered study abroad guidance for Nepali students.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body style={{ fontFamily: "system-ui, sans-serif", margin: 0, padding: 24, maxWidth: 720 }}>
+    <html lang="en" className="h-full">
+      <body className="h-full bg-gray-950 text-gray-100 antialiased">
         {children}
       </body>
     </html>
