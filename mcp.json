@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "hostinger-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["hostinger-api-mcp@latest"],
+      "env": {
+        "HOSTINGER_API_TOKEN": "ZrI82ut1JBBhuzthi9wNyFDT4KQfSBRsGjQko2Wl5b53f470"
+      }
+    }
+  }
+}
