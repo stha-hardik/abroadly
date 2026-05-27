@@ -24,7 +24,7 @@ from app.eval.evaluator import default_evaluator
 from app.eval.types import Decision, EvalDecision
 from app.models.student import ChatTurnModel, ChatTurnOut, StudentModel
 from app.normalizer import default_normalizer
-from app.rag.generator import generate_answer
+from app.rag.generator import generate_answer, _clean_title
 from app.rag.reranker import rerank
 from app.rag.retriever import retrieve
 
@@ -190,7 +190,7 @@ async def chat_endpoint(
             chunk_id=c.id,
             source_type=c.source_type,
             score=c.score,
-            title=c.metadata.get("title"),
+            title=_clean_title(c.metadata.get("title", "")),
         )
         for c in retrieved.chunks
     ]
