@@ -1,4 +1,6 @@
 "use client";
+
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createStudent, type EducationLevel } from "@/lib/api";
@@ -29,6 +31,12 @@ const EMPTY: FormData = {
   goals: "",
 };
 
+const stepMeta = [
+  { step: 1, label: "Identity" },
+  { step: 2, label: "Education" },
+  { step: 3, label: "Goals" },
+] as const;
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
@@ -48,24 +56,20 @@ export default function OnboardingPage() {
     const errs: Partial<Record<keyof FormData, string>> = {};
     if (!form.full_name.trim()) errs.full_name = "Full name is required.";
     if (!form.email.trim()) errs.email = "Email is required.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errs.email = "Enter a valid email address.";
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
 
-  function validateStep2(): boolean {
-    return true; // all optional in step 2 except education_level which has a default
-  }
-
   async function handleNext() {
     if (step === 1 && !validateStep1()) return;
-    if (step === 2 && !validateStep2()) return;
     if (step < 3) {
       setStep((s) => (s + 1) as Step);
       return;
     }
-    // Submit
+
     setSubmitting(true);
     setApiError("");
     try {
@@ -94,175 +98,272 @@ export default function OnboardingPage() {
   }
 
   const inputCls =
-    "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500";
-  const labelCls = "block text-sm text-gray-400 mb-1";
-  const errorCls = "text-xs text-red-400 mt-1";
+    "w-full rounded-md border border-[#d9d3ea] bg-white px-4 py-3 text-sm font-semibold text-[#21143d] placeholder:text-[#948ba8] focus:border-[#673de6] focus:outline-none focus:ring-4 focus:ring-[#673de6]/15";
+  const labelCls = "mb-2 block text-sm font-black text-[#342456]";
+  const errorCls = "mt-2 text-xs font-bold text-[#d64545]";
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4 bg-gray-950">
-      <div className="max-w-md w-full">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <span className="text-2xl font-bold text-white">Abroadly</span>
-          <p className="text-gray-400 text-sm mt-1">Tell us about yourself</p>
-        </div>
-
-        {/* Progress */}
-        <div className="flex gap-2 mb-8">
-          {([1, 2, 3] as const).map((n) => (
-            <div
-              key={n}
-              className={`flex-1 h-1.5 rounded-full transition-colors duration-200 ${
-                n <= step ? "bg-emerald-500" : "bg-gray-700"
-              }`}
-            />
-          ))}
-        </div>
-        <p className="text-xs text-gray-500 mb-6">Step {step} of 3</p>
-
-        {/* Step content */}
-        <div className="space-y-5">
-          {step === 1 && (
-            <>
-              <h2 className="text-lg font-semibold text-white">Basic info</h2>
-              <div>
-                <label className={labelCls}>Full name *</label>
-                <input
-                  className={inputCls}
-                  placeholder="Aarav Sharma"
-                  value={form.full_name}
-                  onChange={set("full_name")}
-                />
-                {errors.full_name && <p className={errorCls}>{errors.full_name}</p>}
-              </div>
-              <div>
-                <label className={labelCls}>Email *</label>
-                <input
-                  type="email"
-                  className={inputCls}
-                  placeholder="you@example.com"
-                  value={form.email}
-                  onChange={set("email")}
-                />
-                {errors.email && <p className={errorCls}>{errors.email}</p>}
-              </div>
-              <div>
-                <label className={labelCls}>Phone (optional)</label>
-                <input
-                  className={inputCls}
-                  placeholder="+977 98XXXXXXXX"
-                  value={form.phone}
-                  onChange={set("phone")}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>City / district in Nepal (optional)</label>
-                <input
-                  className={inputCls}
-                  placeholder="Kathmandu"
-                  value={form.location}
-                  onChange={set("location")}
-                />
-              </div>
-            </>
-          )}
-
-          {step === 2 && (
-            <>
-              <h2 className="text-lg font-semibold text-white">Education background</h2>
-              <div>
-                <label className={labelCls}>Education level *</label>
-                <select
-                  className={inputCls}
-                  value={form.education_level}
-                  onChange={set("education_level")}
-                >
-                  <option value="plus_two">+2 (Class 12)</option>
-                  <option value="a_levels">A-Levels</option>
-                  <option value="bba">BBA</option>
-                  <option value="bachelors">Bachelors</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Current GPA (optional, 0–4.5)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="4.5"
-                  className={inputCls}
-                  placeholder="3.5"
-                  value={form.gpa}
-                  onChange={set("gpa")}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Preferred field of study (optional)</label>
-                <input
-                  className={inputCls}
-                  placeholder="e.g. Computer Science, Nursing, Business"
-                  value={form.preferred_field}
-                  onChange={set("preferred_field")}
-                />
-              </div>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              <h2 className="text-lg font-semibold text-white">Your goals</h2>
-              <div>
-                <label className={labelCls}>Target countries (comma-separated)</label>
-                <input
-                  className={inputCls}
-                  placeholder="Australia, Canada, UK"
-                  value={form.target_countries}
-                  onChange={set("target_countries")}
-                />
-                <p className="text-xs text-gray-600 mt-1">
-                  e.g. Australia, Canada, UK, USA, Germany
-                </p>
-              </div>
-              <div>
-                <label className={labelCls}>What do you want to achieve? (optional)</label>
-                <textarea
-                  className={inputCls}
-                  rows={4}
-                  maxLength={500}
-                  placeholder="e.g. I want to study nursing in Australia and work there after graduation..."
-                  value={form.goals}
-                  onChange={set("goals")}
-                />
-                <p className="text-xs text-gray-600 mt-1">{form.goals.length}/500</p>
-              </div>
-              {apiError && (
-                <div className="bg-red-900/40 border border-red-700 rounded-lg px-4 py-3 text-red-300 text-sm">
-                  {apiError}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <div className="flex gap-3 mt-8">
-          {step > 1 && (
-            <button
-              onClick={() => setStep((s) => (s - 1) as Step)}
-              className="flex-1 py-3 rounded-lg border border-gray-700 text-gray-300 hover:border-gray-500 transition-colors"
-            >
-              Back
-            </button>
-          )}
-          <button
-            onClick={handleNext}
-            disabled={submitting}
-            className="flex-1 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-900 disabled:text-emerald-600 text-white font-semibold transition-colors"
+    <main className="min-h-screen bg-[#fbfaf7] text-[#21143d]">
+      <div className="ab-grid min-h-screen">
+        <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+          <Link href="/" className="ab-focus flex items-center gap-3 rounded-md">
+            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#673de6] text-sm font-black text-white">
+              A
+            </span>
+            <span className="text-lg font-black">Abroadly</span>
+          </Link>
+          <Link
+            href="/chat"
+            className="ab-focus rounded-md border border-[#d9d3ea] bg-white px-4 py-2 text-sm font-black text-[#342456] transition hover:border-[#673de6]"
           >
-            {submitting ? "Creating profile…" : step === 3 ? "Finish" : "Next →"}
-          </button>
-        </div>
+            Open chat
+          </Link>
+        </header>
+
+        <section className="mx-auto grid max-w-7xl gap-8 px-5 pb-12 pt-4 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <aside className="rounded-lg bg-[#21143d] p-7 text-white ab-soft-shadow">
+            <p className="text-sm font-black uppercase text-[#00d6a3]">Student profile</p>
+            <h1 className="mt-4 text-3xl font-black leading-tight sm:text-4xl">
+              Set the context once. Ask better questions after.
+            </h1>
+            <p className="mt-5 text-base leading-8 text-white/76">
+              Abroadly uses your profile to shape guidance around your education,
+              target countries, and goals. Keep it honest and simple.
+            </p>
+
+            <div className="mt-8 space-y-3">
+              {stepMeta.map((item) => {
+                const active = item.step === step;
+                const complete = item.step < step;
+                return (
+                  <div
+                    key={item.step}
+                    className={`flex items-center gap-3 rounded-md border px-4 py-3 ${
+                      active
+                        ? "border-[#00d6a3] bg-white/12"
+                        : complete
+                        ? "border-white/18 bg-white/8"
+                        : "border-white/12 bg-transparent"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-8 w-8 items-center justify-center rounded-md text-sm font-black ${
+                        active || complete ? "bg-[#00d6a3] text-[#21143d]" : "bg-white/10"
+                      }`}
+                    >
+                      {item.step}
+                    </span>
+                    <span className="font-black">{item.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
+
+          <section className="rounded-lg border border-[#ded8ee] bg-white p-5 shadow-sm sm:p-8">
+            <div className="mb-8">
+              <p className="text-sm font-black text-[#673de6]">Step {step} of 3</p>
+              <div className="mt-4 h-2 rounded-full bg-[#eee9f7]">
+                <div
+                  className="h-2 rounded-full bg-[#673de6] transition-all"
+                  style={{ width: `${(step / 3) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              {step === 1 && (
+                <>
+                  <div>
+                    <h2 className="text-2xl font-black">Basic information</h2>
+                    <p className="mt-2 text-sm leading-6 text-[#6a607f]">
+                      Start with the details needed to create your private chat profile.
+                    </p>
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label className={labelCls} htmlFor="full_name">
+                        Full name
+                      </label>
+                      <input
+                        id="full_name"
+                        className={inputCls}
+                        placeholder="Aarav Sharma"
+                        value={form.full_name}
+                        onChange={set("full_name")}
+                      />
+                      {errors.full_name && <p className={errorCls}>{errors.full_name}</p>}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className={labelCls} htmlFor="email">
+                        Email
+                      </label>
+                      <input
+                        id="email"
+                        type="email"
+                        className={inputCls}
+                        placeholder="you@example.com"
+                        value={form.email}
+                        onChange={set("email")}
+                      />
+                      {errors.email && <p className={errorCls}>{errors.email}</p>}
+                    </div>
+                    <div>
+                      <label className={labelCls} htmlFor="phone">
+                        Phone
+                      </label>
+                      <input
+                        id="phone"
+                        className={inputCls}
+                        placeholder="+977 98XXXXXXXX"
+                        value={form.phone}
+                        onChange={set("phone")}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls} htmlFor="location">
+                        City or district
+                      </label>
+                      <input
+                        id="location"
+                        className={inputCls}
+                        placeholder="Kathmandu"
+                        value={form.location}
+                        onChange={set("location")}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {step === 2 && (
+                <>
+                  <div>
+                    <h2 className="text-2xl font-black">Education background</h2>
+                    <p className="mt-2 text-sm leading-6 text-[#6a607f]">
+                      Add enough context for better admissions and eligibility guidance.
+                    </p>
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <label className={labelCls} htmlFor="education_level">
+                        Education level
+                      </label>
+                      <select
+                        id="education_level"
+                        className={inputCls}
+                        value={form.education_level}
+                        onChange={set("education_level")}
+                      >
+                        <option value="plus_two">+2 (Class 12)</option>
+                        <option value="a_levels">A-Levels</option>
+                        <option value="bba">BBA</option>
+                        <option value="bachelors">Bachelors</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls} htmlFor="gpa">
+                        Current GPA
+                      </label>
+                      <input
+                        id="gpa"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="4.5"
+                        className={inputCls}
+                        placeholder="3.5"
+                        value={form.gpa}
+                        onChange={set("gpa")}
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className={labelCls} htmlFor="preferred_field">
+                        Preferred field of study
+                      </label>
+                      <input
+                        id="preferred_field"
+                        className={inputCls}
+                        placeholder="Computer Science, Nursing, Business"
+                        value={form.preferred_field}
+                        onChange={set("preferred_field")}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {step === 3 && (
+                <>
+                  <div>
+                    <h2 className="text-2xl font-black">Goals and destinations</h2>
+                    <p className="mt-2 text-sm leading-6 text-[#6a607f]">
+                      Share your rough plan. You can refine it inside chat later.
+                    </p>
+                  </div>
+                  <div>
+                    <label className={labelCls} htmlFor="target_countries">
+                      Target countries
+                    </label>
+                    <input
+                      id="target_countries"
+                      className={inputCls}
+                      placeholder="Australia, Canada, UK"
+                      value={form.target_countries}
+                      onChange={set("target_countries")}
+                    />
+                    <p className="mt-2 text-xs font-semibold text-[#817793]">
+                      Separate countries with commas.
+                    </p>
+                  </div>
+                  <div>
+                    <label className={labelCls} htmlFor="goals">
+                      What do you want to achieve?
+                    </label>
+                    <textarea
+                      id="goals"
+                      className={inputCls}
+                      rows={5}
+                      maxLength={500}
+                      placeholder="I want to study nursing in Australia and understand the safest next steps..."
+                      value={form.goals}
+                      onChange={set("goals")}
+                    />
+                    <p className="mt-2 text-xs font-semibold text-[#817793]">
+                      {form.goals.length}/500
+                    </p>
+                  </div>
+                  {apiError && (
+                    <div className="rounded-md border border-[#f1b4b4] bg-[#fff1f1] px-4 py-3 text-sm font-semibold text-[#9b2424]">
+                      {apiError}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="mt-8 flex gap-3">
+              {step > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => (s - 1) as Step)}
+                  className="ab-focus flex-1 rounded-md border border-[#d9d3ea] bg-white px-5 py-3 font-black text-[#342456] transition hover:border-[#673de6]"
+                >
+                  Back
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={submitting}
+                className="ab-focus flex-1 rounded-md bg-[#673de6] px-5 py-3 font-black text-white transition hover:bg-[#5025d1] disabled:cursor-not-allowed disabled:bg-[#b8a9ee]"
+              >
+                {submitting ? "Creating profile" : step === 3 ? "Finish" : "Next"}
+              </button>
+            </div>
+          </section>
+        </section>
       </div>
     </main>
   );

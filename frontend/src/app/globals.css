@@ -1,3 +1,75 @@
 @import "tailwindcss";
 
 @plugin "@tailwindcss/forms";
+
+:root {
+  --ab-ink: #21143d;
+  --ab-ink-2: #37216a;
+  --ab-plum: #673de6;
+  --ab-mint: #00d6a3;
+  --ab-coral: #ff7a59;
+  --ab-sun: #ffd166;
+  --ab-paper: #fbfaf7;
+  --ab-line: #ded8ee;
+}
+
+* {
+  letter-spacing: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100%;
+  background:
+    linear-gradient(180deg, rgba(251, 250, 247, 0.96), rgba(245, 242, 252, 0.98)),
+    var(--ab-paper);
+  color: var(--ab-ink);
+  font-family: "Aptos", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(0, 214, 163, 0.35);
+}
+
+.ab-grid {
+  background-image:
+    linear-gradient(rgba(103, 61, 230, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103, 61, 230, 0.08) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.ab-soft-shadow {
+  box-shadow: 0 22px 70px rgba(33, 20, 61, 0.14);
+}
+
+.ab-button-shadow {
+  box-shadow: 0 16px 34px rgba(103, 61, 230, 0.26);
+}
+
+.ab-focus {
+  outline: none;
+}
+
+.ab-focus:focus-visible {
+  outline: 3px solid rgba(0, 214, 163, 0.5);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
