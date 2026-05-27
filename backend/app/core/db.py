@@ -81,6 +81,9 @@ CREATE TABLE IF NOT EXISTS chat_turns (
     eval_decision TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+"""
+
+_CREATE_CHAT_TURNS_INDEX = """
 CREATE INDEX IF NOT EXISTS ix_chat_turns_student_created
     ON chat_turns (student_id, created_at);
 """
@@ -92,3 +95,4 @@ async def create_tables() -> None:
         await conn.execute(text(_CREATE_STUDENTS))
         await conn.execute(text(_CREATE_CHAT_AUDIT))
         await conn.execute(text(_CREATE_CHAT_TURNS))
+        await conn.execute(text(_CREATE_CHAT_TURNS_INDEX))
