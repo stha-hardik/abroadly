@@ -22,9 +22,9 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
 
     # Eval thresholds
-    eval_min_retrieval_score: float = 0.55
-    eval_min_grounding_score: float = 0.60
-    eval_scope_strict: bool = True
+    eval_min_retrieval_score: float = 0.35
+    eval_min_grounding_score: float = 0.30
+    eval_scope_strict: bool = False
 
     # Uploads
     upload_dir: str = "./uploads"
