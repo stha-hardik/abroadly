@@ -278,10 +278,62 @@ function SourceChip({ source }: { source: ChatSource }) {
   );
 }
 
+/* ── Text formatting ──────────────────────────────────────────────── */
+
+function cleanAnswerText(raw: string): string {
+  let text = raw;
+  text = text.replace(/\[Source:\s*[^\]]*\.(?:md|txt|pdf)\s*\]/gi, "");
+  text = text.replace(/\[Source:\s*[^\]]*\]/gi, "");
+  text = text.replace(/\*\*Sources?\*\*[\s\S]*$/i, "");
+  text = text.replace(/\n{3,}/g, "\n\n");
+  return text.trim();
+}
+
+function FormattedText({ text }: { text: string }) {
+  const clean = cleanAnswerText(text);
+  const parts = clean.split("\n");
+
+  return (
+    <div className="chat-bubble-text">
+      {parts.map((line, i) => {
+        if (!line.trim()) return <br key={i} />;
+
+        const isBullet = /^\s*[\*\-•]\s+/.test(line);
+        const content = line.replace(/^\s*[\*\-•]\s+/, "");
+
+        const formatted = content.split(/(\*\*[^*]+\*\*)/).map((seg, j) => {
+          if (seg.startsWith("**") && seg.endsWith("**")) {
+            return <strong key={j} className="font-semibold text-[var(--ab-ink)]">{seg.slice(2, -2)}</strong>;
+          }
+          return seg;
+        });
+
+        if (isBullet) {
+          return (
+            <div key={i} className="flex gap-2 pl-1 py-0.5">
+              <span className="text-[var(--ab-plum)] mt-[3px] text-[8px] shrink-0">●</span>
+              <span>{formatted}</span>
+            </div>
+          );
+        }
+
+        if (/^\*\*Next steps:\*\*$/i.test(line.trim()) || /^\*\*You might also want to ask:\*\*$/i.test(line.trim())) {
+          return (
+            <p key={i} className="mt-3 mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-400">
+              Next steps
+            </p>
+          );
+        }
+
+        return <p key={i} className="py-0.5">{formatted}</p>;
+      })}
+    </div>
+  );
+}
+
 /* ── AI Bubble ────────────────────────────────────────────────────── */
 
 function AiResponseBubble({ response }: { response: ChatResponse }) {
-  const pct = Math.round(response.confidence * 100);
   const answer =
     response.answer ?? response.clarifying_question ?? "I need a little more context.";
 
@@ -316,7 +368,7 @@ function AiResponseBubble({ response }: { response: ChatResponse }) {
         </span>
       )}
 
-      <p className="chat-bubble-text">{answer}</p>
+      <FormattedText text={answer} />
 
       {response.sources.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5 border-t border-gray-100 pt-3">

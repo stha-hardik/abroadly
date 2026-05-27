@@ -6,6 +6,7 @@ student something more useful than a refusal.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from app.eval.types import RetrievedSet
@@ -26,15 +27,34 @@ def _format_profile(student: dict) -> str:
     return "\n".join(parts) or "No profile data provided."
 
 
+def _clean_title(raw: str) -> str:
+    """Turn 12-faq-nepali-students.md → FAQ Nepali students."""
+    name = re.sub(r"^\d+-", "", raw)
+    name = re.sub(r"\.(md|txt|pdf)$", "", name)
+    name = name.replace("-", " ").replace("_", " ").strip()
+    if name:
+        name = name[0].upper() + name[1:]
+    return name or raw
+
+
 def _format_context(retrieved: RetrievedSet) -> str:
-    """Format chunks with source titles so the LLM can cite them."""
+    """Format chunks with clean source titles so the LLM can cite them."""
     if not retrieved.chunks:
         return "(no retrieved chunks for this query)"
     parts = []
     for c in retrieved.chunks:
-        title = c.metadata.get("title", "unknown source")
+        raw_title = c.metadata.get("title", "unknown source")
+        title = _clean_title(raw_title)
         parts.append(f"[Source: {title}]\n{c.text}")
     return "\n\n".join(parts)
+
+
+def _clean_response(text: str) -> str:
+    """Strip leftover raw source references from LLM output."""
+    text = re.sub(r"\[Source:\s*[\w\-]+\.md\]", "", text)
+    text = re.sub(r"\[Source:\s*[\w\-]+\.txt\]", "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 async def generate_answer(
@@ -44,15 +64,10 @@ async def generate_answer(
     history: ChatHistory | None = None,
     mode: str = "full",
 ) -> str:
-    """Compose context from RetrievedChunks + student profile + history, pass to provider.
-
-    mode: "full" when eval says PROCEED, "partial" when eval says LOW_CONFIDENCE
-    but we still want to give the student a gap-honest answer instead of a refusal.
-    """
     system = _load_system_prompt()
     context = _format_context(retrieved)
     profile = _format_profile(student)
-    return await default_llm.generate(
+    answer = await default_llm.generate(
         system=system,
         context=context,
         profile=profile,
@@ -60,3 +75,4 @@ async def generate_answer(
         history=history,
         mode=mode,
     )
+    return _clean_response(answer)
