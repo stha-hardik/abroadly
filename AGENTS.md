@@ -11,7 +11,7 @@ Abroadly is **free, opensource student support** for people from Nepal (and Sout
 - Answers honestly from a curated knowledge base
 - Refuses to guess when it doesn't know
 - Points students at **official sources** (universities, embassies, IRCC / DHA / UCAS / Common App / Education USA / DAAD), **never at a consultancy**
-- Lives at http://abroadly.online, MIT-licensed
+- Lives at https://abroadly.online, MIT-licensed
 
 **We are not a referral funnel. We are the alternative to one.** Any framing in old docs, prompts, or templates that recommends "talking to a consultancy" is from the previous business model and must be replaced when found.
 
@@ -19,15 +19,15 @@ Abroadly is **free, opensource student support** for people from Nepal (and Sout
 
 ## The deploy contract (load-bearing — do not break)
 
-**Push to `main` = live site updates.** GitHub Actions (`.github/workflows/deploy.yml`) SSHes to the Hostinger VPS, runs `./deploy.sh`, and smoke-tests the live URL. There is no separate "staging."
+**Push to `main` = live site updates.** GitHub Actions (`.github/workflows/deploy.yml`) SSHes to the Hostinger VPS, fast-forwards `/opt/abroadly` to the latest `main`, and rebuilds the Docker containers in place. There is no separate "staging."
 
 Consequences for you:
 
 1. **Never push directly to `main`.** Open a PR. Get a human review. Merge to deploy. If you're driving a fully-trusted session, you may merge once tests pass — but assume a human is watching.
-2. **Never edit `.github/workflows/deploy.yml`, `deploy.sh`, `infra/setup-vps.sh`, or `infra/systemd/*` without explicit human approval in the same conversation.** These are the deploy substrate. Break them and the whole site stops updating.
-3. **A red CI = a red site, eventually.** If the workflow fails, do not "fix forward" by merging again. Investigate the failure first — it's almost always SSH config, secrets, or a runtime error on the VPS.
+2. **Never edit `.github/workflows/deploy.yml`, `docker-compose.prod.yml`, `Caddyfile`, or any `Dockerfile` without explicit human approval in the same conversation.** These are the deploy substrate. Break them and the whole site stops updating — or worse, comes back without HTTPS.
+3. **A red CI = a red site, eventually.** If the workflow fails, do not "fix forward" by merging again. Investigate the failure first — it's almost always SSH config, secrets, or a build error inside one of the Dockerfiles.
 4. **Health checks in the workflow are non-negotiable.** Do not remove or weaken the smoke test in `deploy.yml`. If it's flaky, fix the flake; don't delete the check.
-5. **Secrets live in GitHub Secrets and the Hostinger MCP config, never in the repo.** If you see a credential in a diff, stop and tell the user.
+5. **Secrets live in GitHub Secrets, the Hostinger MCP config, and the VPS `.env` — never in the repo.** If you see a credential in a diff, stop and tell the user. `.gitignore` already excludes `.env`, `.env.local`, and `mcp.json`; `mcp.example.json` is the public template.
 
 ---
 
@@ -42,18 +42,90 @@ You edit code locally
       ▼
   GitHub Action: .github/workflows/deploy.yml
       │
-      ├── ssh deploy-key@<VPS_HOST>:<VPS_PORT> 'cd <DEPLOY_PATH> && ./deploy.sh'
-      │     ↑
-      │     pubkey provisioned via Hostinger MCP (VPS_attachPublicKeyV1)
-      │     private key in repo secret VPS_SSH_KEY
+      ├── SSH to <VPS_HOST>:<VPS_PORT> as <VPS_USER> (private key in VPS_SSH_KEY)
+      │     │
+      │     └── cd /opt/abroadly
+      │         git fetch origin main && git reset --hard origin/main
+      │         docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
       │
-      ├── smoke-test: curl http://abroadly.online and :8000/health, both must 200
+      ├── smoke-test: curl https://abroadly.online/ and /api/health, both must 200
       │
       ▼
-  abroadly.online updated
+  abroadly.online updated (Caddy serves HTTPS, auto-Let's-Encrypt)
 ```
 
-Source of truth for the deploy story: [infra/DEPLOY.md](infra/DEPLOY.md). Update that file when the flow changes.
+What this means in practice:
+
+- **Images are built on the VPS itself**, not pulled from a registry. Faster iteration than GHCR but bound to the VPS's disk + CPU.
+- **`git reset --hard`** means the VPS working tree is always equal to `origin/main`. Anything written directly on the VPS (manual edits in `/opt/abroadly`) will be wiped on the next deploy. **Never edit code on the VPS** — push it through git.
+- **Caddy** is the entrypoint on `:80` and `:443`. It terminates TLS via auto-Let's-Encrypt, routes `/api/*` → backend:8000 (stripping the prefix), routes `/health` → backend:8000, and everything else → frontend:80. See `Caddyfile` for the canonical config.
+
+Source of truth for the ops story: [infra/DEPLOY.md](infra/DEPLOY.md). Update that file when the flow changes.
+
+---
+
+## Live system topology
+
+```
+                              Internet
+                                 │
+                                 ▼
+                         abroadly.online
+                       (DNS → 193.203.162.63)
+                                 │
+                                 ▼
+                     +-----------------------+
+                     |  Caddy 2 (alpine)     |
+                     |  :80 → 308 → :443     |
+                     |  auto-Let's-Encrypt   |
+                     +----+--------+---------+
+                          │        │
+              /api/*, /health      │  /*
+                          │        │
+                          ▼        ▼
+                +---------+    +---------+
+                | backend |    | frontend|
+                | :8000   |    | :80     |
+                | FastAPI |    | Next.js |
+                +----+----+    +---------+
+                     │
+                     ▼
+                +---------+
+                |   db    |
+                | :5432   |
+                | Pg 16   |
+                +---------+
+
+Volumes (host paths managed by Docker):
+  pgdata        → /var/lib/postgresql/data
+  caddy_data    → /data        (Caddy certs, key material)
+  caddy_config  → /config
+```
+
+The `backend` container also writes to:
+- Chroma DB persistence dir (path set via `CHROMA_DIR` in the project `.env` on the VPS)
+- Upload dir (path set via `UPLOAD_DIR`)
+
+---
+
+## Operating the live system
+
+| Task | Command |
+|---|---|
+| Tail backend logs | `docker logs -f abroadly-backend-1` |
+| Tail frontend logs | `docker logs -f abroadly-frontend-1` |
+| Tail Caddy logs | `docker logs -f abroadly-caddy-1` |
+| Tail DB logs | `docker logs -f abroadly-db-1` |
+| Restart a single service | `docker compose -f docker-compose.prod.yml restart backend` |
+| Restart everything | `docker compose -f docker-compose.prod.yml restart` |
+| Rebuild + roll out | `docker compose -f docker-compose.prod.yml up -d --build` |
+| Container state | `docker compose -f docker-compose.prod.yml ps` |
+| Exec into a container | `docker compose -f docker-compose.prod.yml exec backend bash` |
+| Run a one-off psql | `docker compose -f docker-compose.prod.yml exec db psql -U abroadly -d abroadly` |
+| Re-seed knowledge | `docker compose -f docker-compose.prod.yml exec backend python scripts/seed_knowledge.py` |
+| Force Caddy cert renew | `docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile` |
+
+All of these run from `/opt/abroadly` on the VPS. The Hostinger MCP can also tail logs via `VPS_getProjectLogsV1` if SSH isn't an option.
 
 ---
 
@@ -84,11 +156,17 @@ These are not aspirations. They are enforced by the design.
 | `backend/app/prompts/system_prompt.md` | The student-direct system prompt — citation-mandatory  |
 | `backend/scripts/seed_knowledge.py` | KB seeder — currently a stub, real seed is Tier-0 work   |
 | `backend/tests/`                    | Pytest. Add to it when you change `eval/` or `rag/`.     |
+| `backend/Dockerfile`                | Backend image build recipe                               |
 | `frontend/src/app/`                 | Next.js App Router pages: `/`, `/onboarding`, `/chat`    |
 | `frontend/src/lib/api.ts`           | Hand-written typed API client (will be OpenAPI-gen'd later) |
+| `frontend/Dockerfile`               | Frontend image build recipe                              |
+| `docker-compose.prod.yml`           | The production stack (used by the deploy workflow)       |
+| `docker-compose.yml`                | Local-dev compose (uses GHCR images — see file for notes)|
+| `Caddyfile`                         | Caddy reverse-proxy + TLS config                         |
 | `docs/(C) *.md`                     | Architecture / eval-layer spec / roadmap. Read these.    |
-| `infra/`                            | VPS setup, systemd, nginx, deploy guide                  |
+| `infra/`                            | VPS bring-up notes, supplementary deploy guide           |
 | `.github/workflows/deploy.yml`      | The auto-deploy workflow                                 |
+| `mcp.example.json`                  | MCP server config template — never commit the real one   |
 | `LICENSE`                           | MIT                                                      |
 
 ---
@@ -103,14 +181,15 @@ These are not aspirations. They are enforced by the design.
 - **Push back when you should.** If you think a feature is wrong, say so before building it.
 - **Be honest about capability gaps.** If you can't reach the VPS, say so. If an MCP isn't loaded, say so. Don't pretend.
 - **If you encounter old consultancy-referral framing**, replace it. Update the prompt, the policy template, the README — wherever you see it. It's a bug.
+- **The legacy `HANDOFF.md`** (kept outside this repo, in earlier handoff packets) describes a now-retired systemd + nginx + paramiko setup. If anyone hands you that doc, treat it as historical context — the canonical ops reference is this file plus `infra/DEPLOY.md`.
 
 ---
 
 ## Quick links
 
-- Live site: http://abroadly.online
+- Live site: https://abroadly.online
 - Repo: https://github.com/stha-hardik/abroadly
-- VPS: AlmaLinux 9 on Hostinger, IP `187.124.27.168`
+- VPS: Ubuntu 24.04 LTS on Hostinger, IP `193.203.162.63`, project root `/opt/abroadly`
 - Deploy guide: `infra/DEPLOY.md`
 - Product/strategic briefing: `PROMPT_FOR_CLAUDE_MAX.md`
 - Architecture: `docs/(C) ARCHITECTURE.md`

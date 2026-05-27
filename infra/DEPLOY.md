@@ -1,203 +1,245 @@
 # Abroadly — VPS Deploy Guide
 
-Single-file truth for deploying Abroadly to a fresh Hostinger VPS (AlmaLinux 9, Plesk-managed).
+Canonical ops reference for the live Abroadly deployment. Pair this with [AGENTS.md](../AGENTS.md), which has the same model from a fresh-AI-session POV.
 
-This replaces the older `(C) DEPLOY-NOTES.md` aspirational doc — that one is kept for historical context; this one reflects the live setup.
+> **History note.** Earlier versions of this file described an AlmaLinux + Plesk + systemd + nginx setup, and an earlier-still doc (`(C) DEPLOY-NOTES.md`, kept for archival reasons) described a third variant. Both are retired. The live stack is Ubuntu + Docker + Caddy, deployed via GitHub Actions over SSH. Anything that contradicts that is stale.
+
+---
 
 ## Architecture on the VPS
 
 ```
-nginx (Plesk-managed, :80)
-  ├── /api/*  →  uvicorn  127.0.0.1:8000  (systemd: abroadly-api)
-  └── /*      →  next     127.0.0.1:3000  (systemd: abroadly-web)
+                              Internet
+                                 │
+                                 ▼
+                         abroadly.online
+                       (DNS → 193.203.162.63)
+                                 │
+                                 ▼
+                     +-----------------------+
+                     |  Caddy 2 (alpine)     |
+                     |  :80 → 308 → :443     |
+                     |  auto-Let's-Encrypt   |
+                     +----+--------+---------+
+                          │        │
+              /api/*, /health      │  /*
+                          │        │
+                          ▼        ▼
+                +---------+    +---------+
+                | backend |    | frontend|
+                | :8000   |    | :80     |
+                | FastAPI |    | Next.js |
+                +----+----+    +---------+
+                     │
+                     ▼
+                +---------+
+                |   db    |
+                | :5432   |
+                | Pg 16   |
+                +---------+
 ```
 
-- Postgres on `localhost:5432`
-- ChromaDB persisted in `backend/chroma_db/`
-- Everything under `/var/www/vhosts/abroadly.online/httpdocs/abroadly/`
+- VPS OS: Ubuntu 24.04 LTS, no control panel
+- Project root on disk: `/opt/abroadly` (cloned from `https://github.com/stha-hardik/abroadly`)
+- Container stack defined by `docker-compose.prod.yml` at the repo root
+- Caddy mounts `./Caddyfile` read-only and stores TLS material in two named volumes (`caddy_data`, `caddy_config`)
+- Postgres data persists in the `pgdata` named volume
 
 ---
 
-## First-time setup
+## Ongoing deploys (default path)
 
-### 1. Put the repo in place
+**Push to `main` = the live site updates within ~1-2 minutes.**
 
-Either option:
+The workflow ([.github/workflows/deploy.yml](../.github/workflows/deploy.yml)):
 
-**Option A — git clone** (recommended; future deploys are `git pull`):
-```bash
-cd /var/www/vhosts/abroadly.online/httpdocs
-git clone https://github.com/stha-hardik/abroadly.git
-cd abroadly
-git config --global --add safe.directory $(pwd)
-```
+1. Receives a `push` to `main` (or a manual `workflow_dispatch`)
+2. Writes the deploy SSH private key (from `VPS_SSH_KEY`) into the runner
+3. SSHes to the VPS using the host pinned in `VPS_KNOWN_HOSTS`
+4. Runs on the VPS:
+   ```bash
+   cd /opt/abroadly
+   git fetch origin main
+   git reset --hard origin/main
+   docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+   ```
+5. Smoke-tests `https://abroadly.online/` and `https://abroadly.online/api/health` — both must return 200 within ~80 s
 
-**Option B — unzip a release zip:**
-```bash
-cd /var/www/vhosts/abroadly.online/httpdocs
-unzip /path/to/abroadly-clean.zip -d abroadly
-cd abroadly
-```
+`git reset --hard` makes the VPS working tree identical to `origin/main`. **Never edit files on the VPS directly** — they will be wiped on the next deploy. Push fixes through git.
 
-### 2. Place secrets
+### Required GitHub Secrets
 
-`backend/.env` is gitignored — you supply it. See `.env.example` for the keys it expects.
+Settings → Secrets and variables → Actions:
 
-```bash
-# example: copy from a safe backup
-cp /root/abroadly-secrets/.env backend/.env
-chmod 600 backend/.env
-```
+| secret | example | notes |
+|---|---|---|
+| `VPS_HOST` | `abroadly.online` or `193.203.162.63` | hostname or IP |
+| `VPS_PORT` | `22` | confirm in hpanel → VPS → Server details |
+| `VPS_USER` | `root` | until we cut over to a non-root app user |
+| `VPS_SSH_KEY` | `-----BEGIN OPENSSH PRIVATE KEY-----…` | ed25519, no passphrase |
+| `VPS_KNOWN_HOSTS` | one line per host key | output of `ssh-keyscan -p <port> <host>` |
+| `GROQ_API_KEY` | `gsk_…` | optional — set when chat must work |
+| `GEMINI_API_KEY` | `AIza…` | optional — fallback LLM + embeddings |
+| `DB_PASSWORD` | strong random string | optional — defaults to `abroadly` (insecure) |
 
-### 3. Set the frontend env
-
-`frontend/.env.local` tells the browser where to reach the API:
-
-```
-NEXT_PUBLIC_API_URL=http://abroadly.online:8000
-```
-
-(Once HTTPS is set up, change to `https://abroadly.online/api`.)
-
-### 4. Run setup
+### One-time deploy-key provisioning
 
 ```bash
-bash infra/setup-vps.sh
-```
-
-Installs Python 3.11, Node, Postgres, builds venv, installs deps, builds Next.js, registers and starts systemd units.
-
-### 5. Wire up Plesk nginx
-
-Plesk → Domain → **Apache & nginx Settings** → **Additional nginx directives** — paste the contents of `infra/nginx/abroadly.conf` and click OK.
-
-### 6. Verify
-
-```bash
-systemctl status abroadly-api abroadly-web
-curl http://127.0.0.1:8000/health      # → {"status":"ok","env":"prod"}
-curl -I http://127.0.0.1:3000          # → HTTP/1.1 200 OK
-curl -I http://abroadly.online         # → HTTP/1.1 200 OK (via Plesk nginx)
-```
-
-Then open `http://abroadly.online` in a browser and complete onboarding → chat.
-
----
-
-## Ongoing deploys
-
-There are two paths. **CI is the default for any merge to `main`.** Manual is the escape hatch for hotfixes when CI is broken or for first-time bring-up.
-
-### Path A — Auto-deploy via GitHub Actions (default)
-
-Defined in `.github/workflows/deploy.yml`. On every push to `main`:
-
-1. Runner SSHes to the VPS using a deploy key.
-2. Runs `./deploy.sh` (same script as manual).
-3. Smoke-tests `http://abroadly.online/` and `:8000/health`, fails the workflow if either returns non-200.
-
-Required GitHub repo secrets (Settings → Secrets and variables → Actions):
-
-| secret             | example value                                                 |
-| ------------------ | ------------------------------------------------------------- |
-| `VPS_HOST`         | `187.124.27.168` (or `abroadly.online`)                       |
-| `VPS_PORT`         | `22` (Hostinger sometimes uses non-standard ports — verify)   |
-| `VPS_USER`         | `root` (until we cut over to a dedicated app user)            |
-| `VPS_SSH_KEY`      | private half of the deploy keypair (ed25519, no passphrase)   |
-| `VPS_KNOWN_HOSTS`  | output of `ssh-keyscan -p <port> <host>` from a trusted box   |
-| `VPS_DEPLOY_PATH`  | optional override; defaults to `/var/www/vhosts/abroadly.online/httpdocs/abroadly` |
-
-One-time key provisioning (do once, never commit the private key anywhere):
-
-```bash
-# locally
+# locally — generate a fresh keypair, no passphrase
 ssh-keygen -t ed25519 -f ~/.ssh/abroadly_deploy -N '' -C 'github-actions-deploy'
 
-# put the public key on the VPS (via Hostinger MCP VPS_attachPublicKeyV1,
-# or manually paste into /root/.ssh/authorized_keys)
-
-# fingerprint the host for known_hosts
+# install the public key on the VPS (one of):
+#   - via Hostinger MCP: VPS_createPublicKeyV1 + VPS_attachPublicKeyV1
+#   - via hpanel Browser Terminal: append cat ~/.ssh/abroadly_deploy.pub to /root/.ssh/authorized_keys
 ssh-keyscan -p <port> <host>     # paste output into VPS_KNOWN_HOSTS
 
-# paste private key contents (cat ~/.ssh/abroadly_deploy) into VPS_SSH_KEY
+cat ~/.ssh/abroadly_deploy       # paste into VPS_SSH_KEY (the private half)
+
+# then delete the local files
+shred -u ~/.ssh/abroadly_deploy ~/.ssh/abroadly_deploy.pub
 ```
 
-Trigger manually: GitHub → Actions → "Deploy to VPS" → Run workflow.
+### Manual trigger
 
-### Path B — Manual SSH (escape hatch)
+GitHub UI: Actions → "Deploy to Hostinger VPS" → **Run workflow**. Or from the CLI:
 
 ```bash
-ssh root@abroadly.online
-cd /var/www/vhosts/abroadly.online/httpdocs/abroadly
-./deploy.sh
+gh workflow run deploy.yml -R stha-hardik/abroadly --ref main
 ```
 
-`deploy.sh` does: `git pull main` → reinstall any new deps → rebuild frontend → restart both systemd services → health-check.
+---
 
-**Never run `deploy.sh` and CI deploy simultaneously** — the workflow uses a `concurrency` group to serialize itself, but it doesn't know about a human SSH session.
+## Manual deploy (escape hatch — when CI is broken)
+
+```bash
+ssh root@abroadly.online -p <VPS_PORT>
+cd /opt/abroadly
+git fetch origin main
+git reset --hard origin/main
+docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+```
+
+Verify after:
+
+```bash
+docker compose -f docker-compose.prod.yml ps
+curl -fsS https://abroadly.online/api/health     # → {"status":"ok","env":"production"}
+curl -fsSI https://abroadly.online/ | head -1     # → HTTP/2 200
+```
+
+**Never run manual + CI deploys simultaneously.** The workflow has a `concurrency` group with itself, but it doesn't know about a human SSH session.
+
+---
+
+## First-time bring-up on a fresh VPS
+
+Only needed when the VPS is wiped or replaced — not for ongoing operation.
+
+```bash
+# 1. As root on the fresh VPS (Ubuntu 24.04, Docker template)
+apt update && apt install -y git
+cd /opt
+git clone https://github.com/stha-hardik/abroadly.git
+cd abroadly
+
+# 2. Project .env at /opt/abroadly/.env (gitignored, manual)
+cat > .env <<'EOF'
+DB_PASSWORD=<strong-random-string>
+GROQ_API_KEY=<gsk_…>
+GEMINI_API_KEY=<AIza…>
+CORS_ORIGINS=https://abroadly.online,http://abroadly.online,https://www.abroadly.online
+EOF
+chmod 600 .env
+
+# 3. Bring up the stack — Caddy will request Let's Encrypt certs on first boot
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 4. Verify
+docker compose -f docker-compose.prod.yml ps
+curl -fsS https://abroadly.online/api/health
+```
+
+After this, every deploy comes through GitHub Actions.
+
+DNS for `abroadly.online` must point at the VPS IP **before** Caddy boots, or the Let's Encrypt challenge fails and Caddy serves on its self-signed fallback.
 
 ---
 
 ## Seeding the knowledge base
 
-The eval layer refuses queries when retrieval finds nothing. Seed real content:
+The eval layer refuses (or partial-answers) most queries until real content is in Chroma. Seed it from inside the backend container:
 
 ```bash
-cd backend
-./venv/bin/python scripts/seed_knowledge.py
+ssh root@abroadly.online -p <VPS_PORT>
+cd /opt/abroadly
+docker compose -f docker-compose.prod.yml exec backend python scripts/seed_knowledge.py
 ```
 
-(TODO: script is currently a stub — needs actual study-abroad content.)
+`scripts/seed_knowledge.py` is currently a stub — see `docs/(C) ROADMAP.md` Phase 6 for the real seed work.
 
 ---
 
-## Logs
+## Logs and observability
 
-- `/var/log/abroadly-api.log` — uvicorn / FastAPI
-- `/var/log/abroadly-web.log` — Next.js
-- Live tail via systemd: `journalctl -u abroadly-api -f`
+```bash
+# Tail (live)
+docker logs -f abroadly-backend-1
+docker logs -f abroadly-frontend-1
+docker logs -f abroadly-caddy-1
+docker logs -f abroadly-db-1
+
+# Last 200 lines
+docker logs --tail 200 abroadly-backend-1
+
+# Container state
+docker compose -f docker-compose.prod.yml ps
+
+# Hostinger MCP equivalent (no SSH needed)
+#   VPS_getProjectLogsV1 → returns the last 300 lines aggregated across services
+```
 
 ---
 
 ## Troubleshooting
 
-**"Service won't start"** → `journalctl -u abroadly-api -n 50` shows the real error.
+**"Workflow fails on smoke-test"** → backend likely crashed on boot. `docker logs --tail 100 abroadly-backend-1` — usually a missing env var (Groq/Gemini key) or a DB migration that didn't take.
 
-**"ModuleNotFoundError / ImportError"** → venv is broken (often from being copied between machines). Rebuild:
+**"Caddy serves self-signed cert / no HTTPS"** → Let's Encrypt challenge failed. Causes: DNS not pointing at the VPS yet, port 80 blocked at the firewall, or rate-limited by Let's Encrypt. Check `docker logs abroadly-caddy-1` for the actual error.
+
+**"docker compose up complains about images"** → registry auth issue. The prod compose builds locally (no GHCR pull), so this usually means a `Dockerfile` regression — check the build output.
+
+**"Push deployed but my change isn't visible"** → check `docker compose ps` for stale containers. `--build --remove-orphans` should rotate them, but verify the running image SHA:
 ```bash
-cd backend
-rm -rf venv
-/usr/bin/python3.11 -m venv venv
-./venv/bin/pip install -r requirements.txt
-systemctl restart abroadly-api
+docker inspect abroadly-backend-1 --format '{{.Image}}'
+docker image ls | head
 ```
 
-**"Backend works on curl, frontend errors in browser"** → `frontend/.env.local` has a `NEXT_PUBLIC_API_URL` the browser can't reach. The browser needs an externally-reachable URL (NOT `localhost`). Fix the env, then `npm run build && systemctl restart abroadly-web`.
-
-**"Permission denied on systemctl"** → you're not root.
-
-**"dubious ownership" git error** → Plesk owns the vhost dir as a different user:
-```bash
-git config --global --add safe.directory /var/www/vhosts/abroadly.online/httpdocs/abroadly
-```
+**"Manual `git pull` on the VPS shows merge conflicts"** → someone edited files on the VPS. Stop, copy the diff into git, and `git reset --hard origin/main`. Don't keep VPS-side edits.
 
 ---
 
 ## Backups
 
-```bash
-# Nightly via cron
-pg_dump abroadly > /backups/abroadly-$(date +%F).sql
+The deploy itself is idempotent (always rebuilt from git + the .env), so what needs backup is **state**:
 
-# Weekly
-tar -czf /backups/chroma-$(date +%F).tar.gz \
-    /var/www/vhosts/abroadly.online/httpdocs/abroadly/backend/chroma_db
+```bash
+# Postgres dump
+docker compose -f docker-compose.prod.yml exec -T db \
+  pg_dump -U abroadly abroadly | gzip > /root/backups/abroadly-$(date +%F).sql.gz
+
+# Chroma + uploads (paths set by env)
+docker compose -f docker-compose.prod.yml exec -T backend \
+  tar -czf - "$CHROMA_DIR" "$UPLOAD_DIR" > /root/backups/abroadly-data-$(date +%F).tar.gz
 ```
+
+Wire this into a cron job on the VPS (or migrate to a managed snapshot). TODO.
 
 ---
 
 ## Known issues (worth fixing soon)
 
-- Services run as `root` — should be a dedicated app user. Plesk vhost ownership complicates this; resolve after we move secrets to `/etc/abroadly/.env`.
-- No SSL yet (Let's Encrypt was rate-limited). Retry via Plesk's "SSL/TLS Certificates" panel.
-- Knowledge base is empty; eval will refuse most queries until `seed_knowledge.py` is real.
+- All containers run as their image-default user (root for the base images). Move backend + frontend to non-root users.
+- `DB_PASSWORD` defaults to `abroadly` if the secret isn't set — fine on a closed Docker network but should be rotated to a strong value via the GitHub Secret + the VPS `.env`.
+- No automated backups yet; `pg_dump` cron not configured.
+- Knowledge base is mostly empty; eval will partial-answer or refuse most queries until `seed_knowledge.py` is real.
+- `LOG_LEVEL` and structured logging are not wired in the backend container — `docker logs` shows uvicorn's default format.
