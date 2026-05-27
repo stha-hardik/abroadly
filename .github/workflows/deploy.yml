@@ -33,15 +33,16 @@ jobs:
               -o UserKnownHostsFile=~/.ssh/known_hosts \
               -o StrictHostKeyChecking=yes \
               -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-              'cd /opt/abroadly && git pull origin main && docker compose up -d --build --remove-orphans'
+              'cd /opt/abroadly && git fetch origin main && git reset --hard origin/main && docker compose -f docker-compose.prod.yml up -d --build --remove-orphans'
 
       - name: Smoke-test live site
         run: |
           sleep 30
           for i in 1 2 3 4 5; do
-            code=$(curl -fsS -o /dev/null -w '%{http_code}' http://abroadly.online/ || true)
-            echo "attempt $i: site=$code"
-            if [ "$code" = "200" ]; then exit 0; fi
+            site_code=$(curl -fsS -o /dev/null -w '%{http_code}' https://abroadly.online/ || true)
+            api_code=$(curl -fsS -o /dev/null -w '%{http_code}' https://abroadly.online/api/health || true)
+            echo "attempt $i: site=$site_code api=$api_code"
+            if [ "$site_code" = "200" ] && [ "$api_code" = "200" ]; then exit 0; fi
             sleep 10
           done
           echo "Smoke test timed out"
