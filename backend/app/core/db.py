@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS chat_audit (
     trace_id TEXT NOT NULL,
     student_id TEXT NOT NULL,
     query TEXT NOT NULL,
+    normalized_query TEXT,
     chunk_ids JSONB DEFAULT '[]',
     retrieval_scores JSONB DEFAULT '[]',
     eval_decision TEXT NOT NULL,
@@ -70,6 +71,12 @@ CREATE TABLE IF NOT EXISTS chat_audit (
     model_used TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+"""
+
+# Idempotent migration — adds normalized_query to existing chat_audit rows.
+# Safe to run repeatedly.
+_ADD_NORMALIZED_QUERY = """
+ALTER TABLE chat_audit ADD COLUMN IF NOT EXISTS normalized_query TEXT;
 """
 
 _CREATE_CHAT_TURNS = """
@@ -90,9 +97,10 @@ CREATE INDEX IF NOT EXISTS ix_chat_turns_student_created
 
 
 async def create_tables() -> None:
-    """Create all application tables if they don't exist."""
+    """Create all application tables if they don't exist + run idempotent migrations."""
     async with engine.begin() as conn:
         await conn.execute(text(_CREATE_STUDENTS))
         await conn.execute(text(_CREATE_CHAT_AUDIT))
+        await conn.execute(text(_ADD_NORMALIZED_QUERY))
         await conn.execute(text(_CREATE_CHAT_TURNS))
         await conn.execute(text(_CREATE_CHAT_TURNS_INDEX))
