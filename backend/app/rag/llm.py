@@ -11,8 +11,8 @@ from app.core.config import settings
 
 # Default generation parameters. Tuned for student-support tone — longer,
 # more explanatory than the original 600-token cap.
-MAX_TOKENS = 2000
-TEMPERATURE = 0.1
+MAX_TOKENS = 1000
+TEMPERATURE = 0.4
 
 # Conversation history is a list of {"role": "user"|"assistant", "content": str}.
 ChatHistory = list[dict]
@@ -83,9 +83,9 @@ class GroqGeminiLLM:
     @staticmethod
     def _user_payload(profile: str, context: str, query: str) -> str:
         return (
-            f"Student Profile:\n{profile}\n\n"
-            f"Retrieved Context:\n{context}\n\n"
-            f"Current Question: {query}"
+            f"<student>\n{profile}\n</student>\n\n"
+            f"<knowledge>\n{context}\n</knowledge>\n\n"
+            f"{query}"
         )
 
     async def _groq(

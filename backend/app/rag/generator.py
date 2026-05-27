@@ -50,9 +50,10 @@ def _format_context(retrieved: RetrievedSet) -> str:
 
 
 def _clean_response(text: str) -> str:
-    """Strip leftover raw source references from LLM output."""
-    text = re.sub(r"\[Source:\s*[\w\-]+\.md\]", "", text)
-    text = re.sub(r"\[Source:\s*[\w\-]+\.txt\]", "", text)
+    """Strip all source references, trailing sections, and formatting artifacts."""
+    text = re.sub(r"\[Source:[^\]]*\]", "", text)
+    text = re.sub(r"\*\*Sources?\*\*[\s\S]*?(?=\n\*\*|$)", "", text)
+    text = re.sub(r"Sources?:\s*\n[\s\S]*?(?=\n\*\*|$)", "", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
