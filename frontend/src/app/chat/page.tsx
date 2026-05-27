@@ -241,8 +241,8 @@ function TypingDots() {
 
 function AiAvatar() {
   return (
-    <div className="chat-avatar-ai flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]">
-      <span className="text-[11px] font-black text-white tracking-tight">Ab</span>
+    <div className="chat-avatar-ai flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] overflow-hidden">
+      <img src="/images/abroadly-logo.svg" alt="Ab" className="h-6 w-6 object-contain" />
     </div>
   );
 }
@@ -848,7 +848,7 @@ export default function ChatPage() {
       <aside className="chat-sidebar">
         <Link href="/" className="ab-focus flex items-center gap-3 rounded-xl px-1">
           <div className="chat-avatar-ai flex h-9 w-9 items-center justify-center rounded-[10px]">
-            <span className="text-xs font-black text-white tracking-tight">Ab</span>
+            <img src="/images/abroadly-logo.svg" alt="Ab" className="h-6 w-6 object-contain" />
           </div>
           <div>
             <p className="text-[13px] font-extrabold text-white">Abroadly</p>
@@ -913,7 +913,7 @@ export default function ChatPage() {
         <header className="chat-header">
           <div className="flex items-center gap-3">
             <div className="chat-avatar-ai flex h-8 w-8 items-center justify-center rounded-[10px] lg:hidden">
-              <span className="text-[10px] font-black text-white">Ab</span>
+              <img src="/images/abroadly-logo.svg" alt="Ab" className="h-5 w-5 object-contain" />
             </div>
             <div>
               <h1 className="text-[15px] font-bold text-[var(--ab-ink)]">

@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
       <form onSubmit={handleSubmit} className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--ab-plum)] to-[var(--ab-mint)] mb-4">
-            <span className="text-sm font-black text-white">Ab</span>
+            <img src="/images/abroadly-logo.svg" alt="Ab" className="h-8 w-8 object-contain" />
           </div>
           <h1 className="text-xl font-bold text-white">Admin Dashboard</h1>
           <p className="text-sm text-white/40 mt-1">Sign in to manage students</p>
