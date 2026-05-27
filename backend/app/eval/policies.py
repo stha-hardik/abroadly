@@ -45,9 +45,9 @@ REFUSAL_TEMPLATES = {
         "study-abroad process itself."
     ),
     "default": (
-        "That's outside what I can help with. I'm focused on study-abroad "
-        "guidance — eligibility, applications, scholarships, visas, and "
-        "documents."
+        "I'm not sure I can help with that one. I'm best at study-abroad "
+        "questions — things like eligibility, applications, scholarships, "
+        "visas, and documents. Try asking me something about studying abroad!"
     ),
 }
 

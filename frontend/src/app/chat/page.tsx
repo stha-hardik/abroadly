@@ -36,18 +36,18 @@ type Message = UserMessage | AiMessage | UploadMessage;
 const prompts = [
   {
     icon: "\u{1F393}",
-    label: "UK applications",
-    text: "What should a Nepali student check before applying to the UK?",
+    label: "Am I eligible?",
+    text: "I just finished +2 in Nepal. Am I eligible to study in the UK?",
   },
   {
-    icon: "\u{1F3E5}",
-    label: "Compare countries",
-    text: "How do I compare Australia and Canada for nursing?",
+    icon: "\u{1F4B0}",
+    label: "Costs & scholarships",
+    text: "What's the total cost to study in Australia and are there scholarships for Nepali students?",
   },
   {
-    icon: "\u{1F4C4}",
-    label: "Visa documents",
-    text: "What documents should I prepare for a student visa?",
+    icon: "\u{1F4CB}",
+    label: "Document checklist",
+    text: "Give me a complete document checklist I need to prepare for studying abroad",
   },
 ];
 
@@ -254,14 +254,26 @@ function UserAvatar() {
 
 /* ── Source chip ───────────────────────────────────────────────────── */
 
+function cleanSourceTitle(title: string | null, chunkId: string): string {
+  if (!title) return chunkId.slice(0, 8);
+  let clean = title
+    .replace(/^\d+-/, "")
+    .replace(/\.md$/, "")
+    .replace(/\.txt$/, "")
+    .replace(/\.pdf$/, "")
+    .replace(/[-_]/g, " ")
+    .trim();
+  if (clean.length > 0) {
+    clean = clean.charAt(0).toUpperCase() + clean.slice(1);
+  }
+  return clean || title;
+}
+
 function SourceChip({ source }: { source: ChatSource }) {
-  const pct = Math.round(source.score * 100);
-  const short = source.chunk_id.slice(0, 8);
+  const label = cleanSourceTitle(source.title, source.chunk_id);
   return (
     <span className="chat-source-chip">
-      <span className="text-[var(--ab-plum)]">{source.source_type}</span>
-      <span className="min-w-0 truncate opacity-70">{source.title ?? short}</span>
-      <span className="font-mono text-[10px] text-emerald-600">{pct}%</span>
+      <span className="min-w-0 truncate">{label}</span>
     </span>
   );
 }
@@ -306,21 +318,9 @@ function AiResponseBubble({ response }: { response: ChatResponse }) {
 
       <p className="chat-bubble-text">{answer}</p>
 
-      {!variant && response.confidence > 0 && (
-        <div className="flex items-center gap-1.5 mt-1">
-          <div className="h-1 w-12 rounded-full bg-gray-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-emerald-400 transition-all duration-500"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <span className="font-mono text-[10px] text-emerald-600">{pct}%</span>
-        </div>
-      )}
-
       {response.sources.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5 border-t border-gray-100 pt-3">
-          {response.sources.map((s) => (
+          {response.sources.slice(0, 3).map((s) => (
             <SourceChip key={s.chunk_id} source={s} />
           ))}
         </div>

@@ -29,11 +29,32 @@ _ALLOW_PATTERNS: list[tuple[str, re.Pattern]] = [
     (
         "study_abroad",
         re.compile(
-            r"\b(study abroad|study in|study at|abroad|overseas|university|college|admission|admissions|apply|application|intake|ucas|common app|degree|masters|bachelor|uk|united kingdom|australia|canada|usa|united states|germany|new zealand)\b",
+            r"\b(study abroad|study in|study at|abroad|overseas|university|college|admission|admissions|apply|application|intake|ucas|common app|degree|masters|bachelor|uk|united kingdom|australia|canada|usa|united states|germany|new zealand|japan|south korea|ireland|netherlands|france|sweden|finland|norway|denmark)\b",
             re.I,
         ),
     ),
-    ("education", re.compile(r"\b(education|course|program|programme|major|field|career|tuition)\b", re.I)),
+    ("education", re.compile(r"\b(education|course|program|programme|major|field|career|tuition|engineering|nursing|it|computer|business|science|medical school|mbbs)\b", re.I)),
+    (
+        "greeting",
+        re.compile(
+            r"\b(hello|hi|hey|namaste|namaskar|good morning|good evening|thanks|thank you|dhanyabad|kasto|help|start)\b",
+            re.I,
+        ),
+    ),
+    (
+        "nepali_context",
+        re.compile(
+            r"\b(nepal|nepali|kathmandu|pokhara|chitwan|plus.?two|\+2|see|slc|neb|gap\s*year|gap\s*\d|mero|malai|ma|padna|padhna|jaane|bidesh|consultanc|agent)\b",
+            re.I,
+        ),
+    ),
+    (
+        "cost_living",
+        re.compile(
+            r"\b(cost|fee|fees|expensive|cheap|afford|loan|bank|financial|money|salary|work|part.?time|job)\b",
+            re.I,
+        ),
+    ),
 ]
 
 
