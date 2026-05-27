@@ -137,7 +137,7 @@ Action-based phases. Each phase ships an artifact + exit criteria you can grade.
 **Goal:** Because we're opensource, a developer in Bangladesh, Sri Lanka, India, or Pakistan can fork, swap the locale, and run their own instance in an afternoon.
 
 **Scope:**
-- `docker-compose.yml` with backend + Postgres + Chroma + frontend
+- `docker-compose.prod.yml` (the canonical prod stack) with backend + Postgres + Chroma + frontend + Caddy
 - `LOCALES.md` explaining what to change for a new locale (system prompt, scope keywords, seed list, currency, language normalizer few-shots)
 - Smoke-tested fork checklist
 

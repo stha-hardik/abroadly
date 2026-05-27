@@ -160,8 +160,7 @@ These are not aspirations. They are enforced by the design.
 | `frontend/src/app/`                 | Next.js App Router pages: `/`, `/onboarding`, `/chat`    |
 | `frontend/src/lib/api.ts`           | Hand-written typed API client (will be OpenAPI-gen'd later) |
 | `frontend/Dockerfile`               | Frontend image build recipe                              |
-| `docker-compose.prod.yml`           | The production stack (used by the deploy workflow)       |
-| `docker-compose.yml`                | Local-dev compose (uses GHCR images — see file for notes)|
+| `docker-compose.prod.yml`           | The production stack (used by the deploy workflow) — only compose file in the repo; always pass `-f docker-compose.prod.yml` explicitly to `docker compose` so there is no ambiguity. |
 | `Caddyfile`                         | Caddy reverse-proxy + TLS config                         |
 | `docs/(C) *.md`                     | Architecture / eval-layer spec / roadmap. Read these.    |
 | `infra/`                            | VPS bring-up notes, supplementary deploy guide           |
