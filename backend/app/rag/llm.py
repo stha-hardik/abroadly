@@ -82,9 +82,12 @@ class GroqGeminiLLM:
     @staticmethod
     def _user_payload(profile: str, context: str, query: str) -> str:
         return (
-            f"<student>\n{profile}\n</student>\n\n"
-            f"<knowledge>\n{context}\n</knowledge>\n\n"
-            f"{query}"
+            f"<student-profile>\n{profile}\n</student-profile>\n\n"
+            f"<knowledge-base>\n{context}\n</knowledge-base>\n\n"
+            f"<student-message>\n{query}\n</student-message>\n\n"
+            f"IMPORTANT: Respond to the student's actual message above. "
+            f"Only reference facts from their profile or knowledge base. "
+            f"Do not invent information they haven't shared."
         )
 
     async def _groq(
@@ -100,7 +103,7 @@ class GroqGeminiLLM:
 
         client = AsyncGroq(api_key=settings.groq_api_key)
         messages: list[dict] = [{"role": "system", "content": self._system_with_mode(system, mode)}]
-        for turn in history[-6:]:
+        for turn in history[-4:]:
             role = turn.get("role")
             content = turn.get("content")
             if role in ("user", "assistant") and content:
@@ -133,7 +136,7 @@ class GroqGeminiLLM:
 
         client = genai.Client(api_key=settings.gemini_api_key)
         contents = []
-        for t in history[-6:]:
+        for t in history[-4:]:
             role = t.get("role")
             content = t.get("content")
             if role in ("user", "assistant") and content:
