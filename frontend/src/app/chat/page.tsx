@@ -329,11 +329,80 @@ function AiResponseBubble({ response }: { response: ChatResponse }) {
   );
 }
 
+/* ── Image compression ────────────────────────────────────────────── */
+
+const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp"];
+const MAX_DIMENSION = 1600;
+const JPEG_QUALITY = 0.7;
+
+function isImageFile(file: File): boolean {
+  return file.type.startsWith("image/") || IMAGE_EXTS.some((e) => file.name.toLowerCase().endsWith(e));
+}
+
+function compressImage(file: File): Promise<{ compressed: File; thumbUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas not supported"));
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const thumbCanvas = document.createElement("canvas");
+      const thumbSize = 80;
+      const thumbRatio = Math.min(thumbSize / img.width, thumbSize / img.height);
+      thumbCanvas.width = Math.round(img.width * thumbRatio);
+      thumbCanvas.height = Math.round(img.height * thumbRatio);
+      const thumbCtx = thumbCanvas.getContext("2d");
+      if (!thumbCtx) return reject(new Error("Canvas not supported"));
+      thumbCtx.drawImage(img, 0, 0, thumbCanvas.width, thumbCanvas.height);
+      const thumbUrl = thumbCanvas.toDataURL("image/jpeg", 0.6);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error("Compression failed"));
+          const compressed = new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+            type: "image/jpeg",
+          });
+          resolve({ compressed, thumbUrl });
+        },
+        "image/jpeg",
+        JPEG_QUALITY
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load image"));
+    };
+    img.src = url;
+  });
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 /* ── Document upload panel ────────────────────────────────────────── */
 
 interface UploadedDoc {
   docTypeId: string;
   filename: string;
+  thumbUrl: string | null;
+  originalSize: number;
+  compressedSize: number | null;
 }
 
 function DocumentPanel({
@@ -357,11 +426,23 @@ function DocumentPanel({
     async (docType: DocType, file: File) => {
       setError(null);
       setUploadingId(docType.id);
+      const originalSize = file.size;
+      let fileToUpload = file;
+      let thumbUrl: string | null = null;
+      let compressedSize: number | null = null;
+
       try {
-        await uploadFile(studentId, file);
+        if (isImageFile(file)) {
+          const result = await compressImage(file);
+          fileToUpload = result.compressed;
+          thumbUrl = result.thumbUrl;
+          compressedSize = result.compressed.size;
+        }
+
+        await uploadFile(studentId, fileToUpload);
         setUploaded((prev) => [
           ...prev.filter((d) => d.docTypeId !== docType.id),
-          { docTypeId: docType.id, filename: file.name },
+          { docTypeId: docType.id, filename: file.name, thumbUrl, originalSize, compressedSize },
         ]);
         onUploadDone(docType, file.name);
       } catch (err: unknown) {
@@ -429,16 +510,39 @@ function DocumentPanel({
                   onDragLeave={() => setDragOver(null)}
                   onDrop={(e) => handleDrop(dt, e)}
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Thumbnail or icon */}
+                  {uploadedDoc?.thumbUrl ? (
+                    <img
+                      src={uploadedDoc.thumbUrl}
+                      alt={uploadedDoc.filename}
+                      className="doc-thumb"
+                    />
+                  ) : (
                     <span className="text-xl leading-none shrink-0">{dt.icon}</span>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-[var(--ab-ink)] truncate">
-                        {dt.label}
-                      </p>
-                      <p className="text-[11px] text-gray-400 truncate">
-                        {uploadedDoc ? uploadedDoc.filename : dt.desc}
-                      </p>
-                    </div>
+                  )}
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-[var(--ab-ink)] truncate">
+                      {dt.label}
+                    </p>
+                    {uploadedDoc ? (
+                      <div>
+                        <p className="text-[11px] text-gray-500 truncate">
+                          {uploadedDoc.filename}
+                        </p>
+                        {uploadedDoc.compressedSize !== null && (
+                          <p className="text-[10px] text-emerald-500 mt-0.5">
+                            {formatBytes(uploadedDoc.originalSize)} → {formatBytes(uploadedDoc.compressedSize)}
+                            {" "}
+                            <span className="text-emerald-600 font-semibold">
+                              ({Math.round((1 - uploadedDoc.compressedSize / uploadedDoc.originalSize) * 100)}% smaller)
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-gray-400 truncate">{dt.desc}</p>
+                    )}
                   </div>
 
                   {uploadedDoc ? (

@@ -470,6 +470,16 @@ body {
   background: #f9fefb;
 }
 
+.doc-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
 .doc-upload-btn {
   padding: 6px 14px;
   border-radius: 8px;
