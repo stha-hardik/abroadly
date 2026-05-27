@@ -57,7 +57,7 @@ export interface ChatResponse {
   reason: string;
 }
 
-export type ChatRole = "user" | "assistant";
+export type ChatRole = "user" | "assistant" | "counselor";
 
 export interface ChatTurn {
   id: string;

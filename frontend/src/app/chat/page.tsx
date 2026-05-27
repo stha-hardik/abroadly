@@ -11,8 +11,6 @@ import {
   type ChatSource,
 } from "@/lib/api";
 
-type MessageRole = "user" | "ai" | "upload";
-
 interface UserMessage {
   role: "user";
   text: string;
@@ -23,6 +21,11 @@ interface AiMessage {
   response: ChatResponse;
 }
 
+interface CounselorMessage {
+  role: "counselor";
+  text: string;
+}
+
 interface UploadMessage {
   role: "upload";
   status: "uploading" | "done" | "error";
@@ -31,7 +34,7 @@ interface UploadMessage {
   docType?: string;
 }
 
-type Message = UserMessage | AiMessage | UploadMessage;
+type Message = UserMessage | AiMessage | CounselorMessage | UploadMessage;
 
 const prompts = [
   {
@@ -712,24 +715,24 @@ export default function ChatPage() {
     setStudentId(sid);
     getChatHistory(sid)
       .then((turns) => {
-        const restored: Message[] = turns.map((t) =>
-          t.role === "user"
-            ? { role: "user", text: t.content }
-            : {
-                role: "ai",
-                response: {
-                  request_id: t.id,
-                  trace_id: t.id,
-                  decision: (t.eval_decision as ChatResponse["decision"]) || "proceed",
-                  confidence: 1,
-                  answer: t.content,
-                  clarifying_question: null,
-                  clarification_needed: false,
-                  sources: [],
-                  reason: "history",
-                },
-              }
-        );
+        const restored: Message[] = turns.map((t): Message => {
+          if (t.role === "user") return { role: "user", text: t.content };
+          if (t.role === "counselor") return { role: "counselor", text: t.content };
+          return {
+            role: "ai",
+            response: {
+              request_id: t.id,
+              trace_id: t.id,
+              decision: (t.eval_decision as ChatResponse["decision"]) || "proceed",
+              confidence: 1,
+              answer: t.content,
+              clarifying_question: null,
+              clarification_needed: false,
+              sources: [],
+              reason: "history",
+            },
+          };
+        });
         setMessages(restored);
       })
       .catch(() => {});
@@ -1020,6 +1023,20 @@ export default function ChatPage() {
                         </p>
                       </div>
                       <UserAvatar />
+                    </div>
+                  );
+                }
+
+                if (msg.role === "counselor") {
+                  return (
+                    <div key={i} className="chat-row chat-row-ai" style={{ animationDelay: "0.05s" }}>
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-emerald-600 ring-1 ring-emerald-500/20">
+                        <span className="text-[10px] font-bold text-white">HC</span>
+                      </div>
+                      <div className="chat-bubble-ai" style={{ borderColor: "rgba(16,185,129,0.15)", background: "#f0fdf9" }}>
+                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide mb-1">Human Counselor</p>
+                        <p className="chat-bubble-text whitespace-pre-wrap">{msg.text}</p>
+                      </div>
                     </div>
                   );
                 }

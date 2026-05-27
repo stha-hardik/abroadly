@@ -96,6 +96,20 @@ CREATE INDEX IF NOT EXISTS ix_chat_turns_student_created
 """
 
 
+_ADD_AI_PAUSED = """
+ALTER TABLE students ADD COLUMN IF NOT EXISTS ai_paused BOOLEAN DEFAULT FALSE;
+"""
+
+_FIX_ROLE_CONSTRAINT = """
+DO $$ BEGIN
+    ALTER TABLE chat_turns DROP CONSTRAINT IF EXISTS chat_turns_role_check;
+    ALTER TABLE chat_turns ADD CONSTRAINT chat_turns_role_check
+        CHECK (role IN ('user', 'assistant', 'counselor'));
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+"""
+
+
 async def create_tables() -> None:
     """Create all application tables if they don't exist + run idempotent migrations."""
     async with engine.begin() as conn:
@@ -104,3 +118,5 @@ async def create_tables() -> None:
         await conn.execute(text(_ADD_NORMALIZED_QUERY))
         await conn.execute(text(_CREATE_CHAT_TURNS))
         await conn.execute(text(_CREATE_CHAT_TURNS_INDEX))
+        await conn.execute(text(_ADD_AI_PAUSED))
+        await conn.execute(text(_FIX_ROLE_CONSTRAINT))

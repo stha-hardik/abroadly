@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import chat, onboarding, upload
+from app.api import admin, chat, onboarding, upload
 from app.core.config import settings
 from app.core.db import create_tables
 
@@ -35,6 +35,7 @@ app.add_middleware(
 app.include_router(onboarding.router, prefix="/students", tags=["onboarding"])
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
 app.include_router(upload.router, prefix="/upload", tags=["upload"])
+app.include_router(admin.router, prefix="/admin", tags=["admin"])
 
 
 @app.get("/health", tags=["meta"])

@@ -172,6 +172,16 @@ async def chat_endpoint(
         "goals": student_model.goals,
     }
 
+    if student_model.ai_paused:
+        await _persist_turn(db, student_id=sid, role="user", content=req.message)
+        await db.commit()
+        return ChatResponse(
+            request_id=request_id, trace_id=trace_id,
+            decision=Decision.PROCEED, confidence=1.0,
+            answer="A counselor is reviewing your case and will reply shortly. Hang tight!",
+            sources=[], reason="ai_paused",
+        )
+
     history = await _load_history(db, sid, HISTORY_TURN_LIMIT)
 
     # Phase 5 — language normalization. Hinglish / Nepali-romanized in,

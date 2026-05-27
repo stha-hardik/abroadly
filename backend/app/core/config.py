@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     eval_min_grounding_score: float = 0.30
     eval_scope_strict: bool = False
 
+    # Admin
+    admin_username: str = "username"
+    admin_password_hash: str = ""
+    jwt_secret: str = "abroadly-jwt-secret-change-in-prod"
+
     # Uploads
     upload_dir: str = "./uploads"
     max_upload_mb: int = 15

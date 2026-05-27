@@ -6,12 +6,12 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy import Column, Float, ForeignKey, Index, String, Text
+from sqlalchemy import Boolean, Column, Float, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 from sqlalchemy.orm import DeclarativeBase
 
 EducationLevel = Literal["plus_two", "a_levels", "bba", "bachelors", "other"]
-ChatRole = Literal["user", "assistant"]
+ChatRole = Literal["user", "assistant", "counselor"]
 
 
 # ---------------------------------------------------------------------------
@@ -34,6 +34,7 @@ class StudentModel(Base):
     target_countries = Column(JSONB, nullable=False, default=list)
     preferred_field = Column(String, nullable=True)
     goals = Column(Text, nullable=True)
+    ai_paused = Column(Boolean, default=False, server_default="false")
     created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
     updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
 
@@ -87,6 +88,7 @@ class StudentOut(StudentBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    ai_paused: bool = False
     created_at: datetime
     updated_at: datetime
 
