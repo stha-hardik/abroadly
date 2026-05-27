@@ -33,18 +33,32 @@ interface UploadMessage {
 type Message = UserMessage | AiMessage | UploadMessage;
 
 const prompts = [
-  "What should a Nepali student check before applying to the UK?",
-  "How do I compare Australia and Canada for nursing?",
-  "What documents should I prepare for a student visa?",
+  {
+    icon: "🎓",
+    label: "UK applications",
+    text: "What should a Nepali student check before applying to the UK?",
+  },
+  {
+    icon: "🏥",
+    label: "Compare countries",
+    text: "How do I compare Australia and Canada for nursing?",
+  },
+  {
+    icon: "📄",
+    label: "Visa documents",
+    text: "What documents should I prepare for a student visa?",
+  },
 ];
+
+/* ── Icons ────────────────────────────────────────────────────────── */
 
 function SendIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+    <svg viewBox="0 0 20 20" className="h-[18px] w-[18px]" fill="none">
       <path
-        d="M5 12h13m0 0-5-5m5 5-5 5"
+        d="M3.5 10h13m-5-5 5 5-5 5"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -54,11 +68,11 @@ function SendIcon() {
 
 function PaperclipIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+    <svg viewBox="0 0 20 20" className="h-[18px] w-[18px]" fill="none">
       <path
-        d="m8.5 12.5 5.7-5.7a3.1 3.1 0 0 1 4.4 4.4l-7.4 7.4a5 5 0 0 1-7.1-7.1l7.8-7.8"
+        d="m7.5 10.5 4.6-4.6a2.5 2.5 0 0 1 3.5 3.5l-6 6a4 4 0 0 1-5.7-5.7l6.3-6.3"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -66,59 +80,119 @@ function PaperclipIcon() {
   );
 }
 
+function SparkleIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor">
+      <path d="M8 0a.5.5 0 0 1 .5.5v2.05A5.001 5.001 0 0 1 12.45 6.5H14.5a.5.5 0 0 1 0 1h-2.05A5.001 5.001 0 0 1 8.5 11.45V13.5a.5.5 0 0 1-1 0v-2.05A5.001 5.001 0 0 1 3.55 7.5H1.5a.5.5 0 0 1 0-1h2.05A5.001 5.001 0 0 1 7.5 2.55V.5A.5.5 0 0 1 8 0Zm0 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
+    </svg>
+  );
+}
+
+/* ── Typing dots animation ────────────────────────────────────────── */
+
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="inline-block h-[6px] w-[6px] rounded-full bg-[var(--ab-plum)]"
+          style={{
+            opacity: 0.4,
+            animation: `dotPulse 1.4s ease-in-out ${i * 0.16}s infinite`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ── Avatar ───────────────────────────────────────────────────────── */
+
+function AiAvatar() {
+  return (
+    <div className="chat-avatar-ai flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]">
+      <span className="text-[11px] font-black text-white tracking-tight">Ab</span>
+    </div>
+  );
+}
+
+function UserAvatar() {
+  return (
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--ab-ink)] ring-1 ring-white/10">
+      <span className="text-[11px] font-bold text-white/90">You</span>
+    </div>
+  );
+}
+
+/* ── Source chip ───────────────────────────────────────────────────── */
+
 function SourceChip({ source }: { source: ChatSource }) {
   const pct = Math.round(source.score * 100);
   const short = source.chunk_id.slice(0, 8);
   return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-md border border-[#d9d3ea] bg-white px-2 py-1 text-xs font-bold text-[#5b5272]">
-      <span className="shrink-0 text-[#673de6]">{source.source_type}</span>
-      <span className="min-w-0 truncate">{source.title ?? short}</span>
-      <span className="shrink-0 text-[#008f72]">{pct}%</span>
+    <span className="chat-source-chip">
+      <span className="text-[var(--ab-plum)]">{source.source_type}</span>
+      <span className="min-w-0 truncate opacity-70">{source.title ?? short}</span>
+      <span className="font-mono text-[10px] text-emerald-600">{pct}%</span>
     </span>
   );
 }
 
+/* ── AI Bubble ────────────────────────────────────────────────────── */
+
 function AiResponseBubble({ response }: { response: ChatResponse }) {
   const pct = Math.round(response.confidence * 100);
-  const answer = response.answer ?? response.clarifying_question ?? "I need a little more context.";
+  const answer =
+    response.answer ?? response.clarifying_question ?? "I need a little more context.";
 
-  if (response.decision === "out_of_scope") {
-    return (
-      <div className="max-w-2xl rounded-lg border border-[#f0c36d] bg-[#fff8e7] px-5 py-4">
-        <p className="text-xs font-black uppercase text-[#9b6200]">Out of scope</p>
-        <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#5e4318]">{answer}</p>
-      </div>
-    );
-  }
+  const variants: Record<string, { badge: string; badgeColor: string; borderColor: string; bg: string }> = {
+    out_of_scope: {
+      badge: "Out of scope",
+      badgeColor: "text-amber-700 bg-amber-50 ring-amber-200/60",
+      borderColor: "border-amber-100",
+      bg: "bg-amber-50/40",
+    },
+    escalate: {
+      badge: "Official portal",
+      badgeColor: "text-blue-700 bg-blue-50 ring-blue-200/60",
+      borderColor: "border-blue-100",
+      bg: "bg-blue-50/40",
+    },
+    low_confidence: {
+      badge: "Clarification needed",
+      badgeColor: "text-[var(--ab-plum)] bg-purple-50 ring-purple-200/60",
+      borderColor: "border-purple-100",
+      bg: "bg-purple-50/30",
+    },
+  };
 
-  if (response.decision === "escalate") {
-    return (
-      <div className="max-w-2xl rounded-lg border border-[#b8cef8] bg-[#eef5ff] px-5 py-4">
-        <p className="text-xs font-black uppercase text-[#2458a6]">Use the official portal</p>
-        <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#263f67]">{answer}</p>
-      </div>
-    );
-  }
-
-  if (response.decision === "low_confidence") {
-    return (
-      <div className="max-w-2xl rounded-lg border border-[#d9d3ea] bg-white px-5 py-4">
-        <p className="text-xs font-black uppercase text-[#673de6]">Need clarification</p>
-        <p className="mt-2 text-sm leading-7 text-[#5b5272]">{answer}</p>
-      </div>
-    );
-  }
+  const variant = variants[response.decision];
 
   return (
-    <div className="max-w-2xl rounded-lg border border-[#d9d3ea] bg-white px-5 py-4 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <p className="whitespace-pre-wrap text-sm leading-7 text-[#21143d]">{answer}</p>
-        <span className="shrink-0 rounded-md bg-[#e8fff8] px-2 py-1 text-xs font-black text-[#008f72]">
-          {pct}%
+    <div className={`chat-bubble-ai ${variant ? variant.bg : ""} ${variant ? variant.borderColor : ""}`}>
+      {variant && (
+        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset ${variant.badgeColor}`}>
+          {variant.badge}
         </span>
-      </div>
+      )}
+
+      <p className="chat-bubble-text">{answer}</p>
+
+      {!variant && response.confidence > 0 && (
+        <div className="flex items-center gap-1.5 mt-1">
+          <div className="h-1 w-12 rounded-full bg-gray-100 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-emerald-400 transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className="font-mono text-[10px] text-emerald-600">{pct}%</span>
+        </div>
+      )}
+
       {response.sources.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-[#eee9f7] pt-3">
+        <div className="mt-3 flex flex-wrap gap-1.5 border-t border-gray-100 pt-3">
           {response.sources.map((s) => (
             <SourceChip key={s.chunk_id} source={s} />
           ))}
@@ -127,6 +201,8 @@ function AiResponseBubble({ response }: { response: ChatResponse }) {
     </div>
   );
 }
+
+/* ── Main page ────────────────────────────────────────────────────── */
 
 export default function ChatPage() {
   const router = useRouter();
@@ -167,9 +243,7 @@ export default function ChatPage() {
         );
         setMessages(restored);
       })
-      .catch(() => {
-        /* history is best-effort */
-      });
+      .catch(() => {});
   }, [router]);
 
   useEffect(() => {
@@ -209,7 +283,7 @@ export default function ChatPage() {
     }
   }
 
-  function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
+  function onKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -260,47 +334,70 @@ export default function ChatPage() {
   const hasMessages = messages.length > 0;
 
   return (
-    <main className="flex h-screen overflow-hidden bg-[#f7f4ff] text-[#21143d]">
-      <aside className="hidden w-80 shrink-0 border-r border-white/12 bg-[#21143d] p-5 text-white lg:flex lg:flex-col">
-        <Link href="/" className="ab-focus flex items-center gap-3 rounded-md">
-          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-white text-sm font-black text-[#673de6]">
-            A
-          </span>
+    <main className="chat-layout">
+      {/* ── Sidebar ───────────────────────────────────────────────── */}
+      <aside className="chat-sidebar">
+        <Link href="/" className="ab-focus flex items-center gap-3 rounded-xl px-1">
+          <div className="chat-avatar-ai flex h-9 w-9 items-center justify-center rounded-[10px]">
+            <span className="text-xs font-black text-white tracking-tight">Ab</span>
+          </div>
           <div>
-            <p className="font-black">Abroadly</p>
-            <p className="text-xs font-semibold text-white/55">Student guidance desk</p>
+            <p className="text-[13px] font-extrabold text-white">Abroadly</p>
+            <p className="text-[11px] font-medium text-white/40">Study abroad guidance</p>
           </div>
         </Link>
 
-        <div className="mt-8 rounded-lg border border-white/12 bg-white/8 p-5">
-          <p className="text-xs font-black uppercase text-[#00d6a3]">Good prompts</p>
-          <div className="mt-4 space-y-2">
-            {prompts.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => sendMessage(prompt)}
-                className="ab-focus w-full rounded-md border border-white/12 bg-white/8 px-3 py-3 text-left text-sm font-semibold leading-6 text-white/82 transition hover:border-[#00d6a3] hover:bg-white/14"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
+        <div className="mt-7 space-y-1.5">
+          <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-white/30">
+            Try asking
+          </p>
+          {prompts.map((p) => (
+            <button
+              key={p.text}
+              type="button"
+              onClick={() => sendMessage(p.text)}
+              className="ab-focus chat-sidebar-btn group"
+            >
+              <span className="text-base leading-none">{p.icon}</span>
+              <span className="min-w-0 truncate">{p.label}</span>
+            </button>
+          ))}
         </div>
 
-        <div className="mt-auto rounded-lg border border-white/12 bg-white/8 p-5">
-          <p className="text-xs font-black uppercase text-white/50">Reminder</p>
-          <p className="mt-3 text-sm leading-7 text-white/76">
-            Abroadly should point you toward official sources, not paid referrals.
-          </p>
+        <div className="mt-auto">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/70">
+              Heads up
+            </p>
+            <p className="mt-2 text-[12px] leading-[1.6] text-white/50">
+              Abroadly points you toward official sources, not paid referrals.
+            </p>
+          </div>
         </div>
       </aside>
 
-      <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center justify-between border-b border-[#ded8ee] bg-white/92 px-4 py-3 backdrop-blur sm:px-6">
-          <div>
-            <p className="text-xs font-black uppercase text-[#673de6]">Live chat</p>
-            <h1 className="text-lg font-black">Ask your study-abroad question</h1>
+      {/* ── Chat area ─────────────────────────────────────────────── */}
+      <section className="chat-main">
+        {/* Header */}
+        <header className="chat-header">
+          <div className="flex items-center gap-3">
+            <div className="chat-avatar-ai flex h-8 w-8 items-center justify-center rounded-[10px] lg:hidden">
+              <span className="text-[10px] font-black text-white">Ab</span>
+            </div>
+            <div>
+              <h1 className="text-[15px] font-bold text-[var(--ab-ink)]">
+                Study Abroad Chat
+              </h1>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                <span className="text-[11px] font-medium text-gray-400">
+                  AI advisor online
+                </span>
+              </div>
+            </div>
           </div>
           <button
             type="button"
@@ -308,122 +405,152 @@ export default function ChatPage() {
               localStorage.removeItem("abroadly_student_id");
               router.push("/onboarding");
             }}
-            className="ab-focus rounded-md border border-[#d9d3ea] bg-white px-3 py-2 text-xs font-black text-[#5b5272] transition hover:border-[#673de6] hover:text-[#21143d]"
+            className="ab-focus chat-header-btn"
           >
-            Start over
+            New session
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-          <div className="mx-auto max-w-4xl space-y-5">
+        {/* Messages */}
+        <div className="chat-messages">
+          <div className="mx-auto max-w-3xl">
+            {/* Empty state */}
             {!hasMessages && (
-              <section className="rounded-lg border border-[#ded8ee] bg-white p-6 shadow-sm sm:p-8">
-                <p className="text-sm font-black uppercase text-[#673de6]">Ready when you are</p>
-                <h2 className="mt-3 text-3xl font-black leading-tight">
-                  Ask about countries, documents, costs, timelines, or official portals.
+              <div className="chat-empty-state">
+                <div className="chat-empty-icon">
+                  <SparkleIcon />
+                </div>
+                <h2 className="mt-5 text-2xl font-bold text-[var(--ab-ink)]">
+                  What would you like to know?
                 </h2>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-[#6a607f]">
-                  The best questions include your education level, target country, field,
-                  budget range, and what you have already checked.
+                <p className="mt-2 text-sm leading-relaxed text-gray-400 max-w-md">
+                  Ask about countries, documents, costs, timelines, scholarships —
+                  anything study-abroad related.
                 </p>
-                <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:hidden">
-                  {prompts.map((prompt) => (
+                <div className="mt-6 grid gap-2 sm:grid-cols-3 w-full max-w-xl">
+                  {prompts.map((p) => (
                     <button
-                      key={prompt}
+                      key={p.text}
                       type="button"
-                      onClick={() => sendMessage(prompt)}
-                      className="ab-focus rounded-md border border-[#d9d3ea] bg-[#fbfaf7] px-3 py-3 text-left text-sm font-bold leading-6 transition hover:border-[#673de6]"
+                      onClick={() => sendMessage(p.text)}
+                      className="ab-focus chat-prompt-card group"
                     >
-                      {prompt}
+                      <span className="text-lg">{p.icon}</span>
+                      <span className="text-[12px] font-semibold text-gray-500 group-hover:text-[var(--ab-ink)] transition-colors">
+                        {p.label}
+                      </span>
                     </button>
                   ))}
-                </div>
-              </section>
-            )}
-
-            {messages.map((msg, i) => {
-              if (msg.role === "user") {
-                return (
-                  <div key={i} className="flex justify-end">
-                    <div className="max-w-2xl rounded-lg bg-[#673de6] px-5 py-3 text-white shadow-sm">
-                      <p className="whitespace-pre-wrap text-sm leading-7 font-semibold">{msg.text}</p>
-                    </div>
-                  </div>
-                );
-              }
-
-              if (msg.role === "upload") {
-                const color =
-                  msg.status === "done"
-                    ? "border-[#95e8d3] bg-[#ebfff9] text-[#008f72]"
-                    : msg.status === "error"
-                    ? "border-[#f1b4b4] bg-[#fff1f1] text-[#9b2424]"
-                    : "border-[#d9d3ea] bg-white text-[#5b5272]";
-                return (
-                  <div key={i} className="flex justify-start">
-                    <div className={`rounded-md border px-4 py-2 text-xs font-black ${color}`}>
-                      {msg.text}
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={i} className="flex justify-start">
-                  <AiResponseBubble response={msg.response} />
-                </div>
-              );
-            })}
-
-            {thinking && (
-              <div className="flex justify-start">
-                <div className="rounded-lg border border-[#d9d3ea] bg-white px-5 py-4 shadow-sm">
-                  <span className="text-sm font-bold text-[#6a607f]">Thinking...</span>
                 </div>
               </div>
             )}
 
-            <div ref={bottomRef} />
+            {/* Message list */}
+            <div className="space-y-1">
+              {messages.map((msg, i) => {
+                if (msg.role === "user") {
+                  return (
+                    <div key={i} className="chat-row chat-row-user" style={{ animationDelay: "0.05s" }}>
+                      <div className="chat-bubble-user">
+                        <p className="whitespace-pre-wrap text-[14px] leading-[1.65]">
+                          {msg.text}
+                        </p>
+                      </div>
+                      <UserAvatar />
+                    </div>
+                  );
+                }
+
+                if (msg.role === "upload") {
+                  const colorClass =
+                    msg.status === "done"
+                      ? "chat-upload-done"
+                      : msg.status === "error"
+                      ? "chat-upload-error"
+                      : "chat-upload-pending";
+                  return (
+                    <div key={i} className="chat-row chat-row-ai" style={{ animationDelay: "0.05s" }}>
+                      <AiAvatar />
+                      <div className={`chat-upload-pill ${colorClass}`}>
+                        <PaperclipIcon />
+                        <span>{msg.text}</span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={i} className="chat-row chat-row-ai" style={{ animationDelay: "0.05s" }}>
+                    <AiAvatar />
+                    <AiResponseBubble response={msg.response} />
+                  </div>
+                );
+              })}
+
+              {thinking && (
+                <div className="chat-row chat-row-ai" style={{ animationDelay: "0.05s" }}>
+                  <AiAvatar />
+                  <div className="chat-bubble-ai">
+                    <TypingDots />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div ref={bottomRef} className="h-4" />
           </div>
         </div>
 
-        <footer className="shrink-0 border-t border-[#ded8ee] bg-white px-4 py-4 sm:px-6">
-          <div className="mx-auto flex max-w-4xl items-center gap-2 rounded-lg border border-[#d9d3ea] bg-[#fbfaf7] p-2">
-            <input
-              className="min-w-0 flex-1 border-0 bg-transparent px-3 py-3 text-sm font-semibold text-[#21143d] placeholder:text-[#948ba8] focus:ring-0"
-              placeholder="Ask a question..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKey}
-              disabled={thinking}
-            />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              title="Upload PDF or TXT"
-              aria-label="Upload PDF or TXT"
-              className="ab-focus flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[#d9d3ea] bg-white text-[#5b5272] transition hover:border-[#673de6] hover:text-[#673de6] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <PaperclipIcon />
-            </button>
-            <button
-              type="button"
-              onClick={() => sendMessage()}
-              disabled={thinking || !input.trim()}
-              title="Send message"
-              aria-label="Send message"
-              className="ab-focus flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#673de6] text-white transition hover:bg-[#5025d1] disabled:cursor-not-allowed disabled:bg-[#b8a9ee]"
-            >
-              <SendIcon />
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".pdf,.txt"
-              className="hidden"
-              onChange={onFileChange}
-            />
+        {/* Input bar */}
+        <footer className="chat-footer">
+          <div className="mx-auto max-w-3xl">
+            <div className="chat-input-wrap">
+              <textarea
+                className="chat-input"
+                placeholder="Ask a question..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={onKey}
+                disabled={thinking}
+                rows={1}
+              />
+              <div className="flex items-center gap-1.5 px-2 pb-2">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  title="Upload PDF or TXT"
+                  aria-label="Upload PDF or TXT"
+                  className="ab-focus chat-action-btn"
+                >
+                  <PaperclipIcon />
+                </button>
+                <div className="flex-1" />
+                <span className="text-[10px] text-gray-300 font-medium hidden sm:block">
+                  Enter to send
+                </span>
+                <button
+                  type="button"
+                  onClick={() => sendMessage()}
+                  disabled={thinking || !input.trim()}
+                  title="Send message"
+                  aria-label="Send message"
+                  className="ab-focus chat-send-btn"
+                >
+                  <SendIcon />
+                </button>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".pdf,.txt"
+                className="hidden"
+                onChange={onFileChange}
+              />
+            </div>
+            <p className="mt-2 text-center text-[10px] text-gray-300">
+              Abroadly can make mistakes. Verify with official sources.
+            </p>
           </div>
         </footer>
       </section>
