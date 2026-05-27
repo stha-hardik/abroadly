@@ -52,8 +52,8 @@ jobs:
     steps:
       - name: Trigger Hostinger VPS redeploy
         run: |
-          curl -sf -X PUT \
-            "https://developers.hostinger.com/api/vps/v1/virtual-machines/${{ secrets.HOSTINGER_VM_ID }}/docker-compose/${{ secrets.HOSTINGER_PROJECT_NAME }}" \
+          curl -sf -X POST \
+            "https://developers.hostinger.com/api/vps/v1/virtual-machines/${{ secrets.HOSTINGER_VM_ID }}/docker/${{ secrets.HOSTINGER_PROJECT_NAME }}/update" \
             -H "Authorization: Bearer ${{ secrets.HOSTINGER_API_TOKEN }}" \
             -H "Content-Type: application/json"
 
