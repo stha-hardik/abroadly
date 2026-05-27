@@ -57,6 +57,16 @@ export interface ChatResponse {
   reason: string;
 }
 
+export type ChatRole = "user" | "assistant";
+
+export interface ChatTurn {
+  id: string;
+  role: ChatRole;
+  content: string;
+  eval_decision: string | null;
+  created_at: string;
+}
+
 export interface UploadResponse {
   filename: string;
   message: string;
@@ -125,6 +135,15 @@ export async function uploadFile(
   fd.append("file", file);
   return handle<UploadResponse>(
     await fetch(`${BASE}/upload`, { method: "POST", body: fd })
+  );
+}
+
+export async function getChatHistory(
+  student_id: string,
+  limit = 50
+): Promise<ChatTurn[]> {
+  return handle<ChatTurn[]>(
+    await fetch(`${BASE}/chat/history/${student_id}?limit=${limit}`)
   );
 }
 

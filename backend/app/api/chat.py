@@ -1,7 +1,12 @@
-"""Chat endpoint — retrieve -> rerank -> evaluate -> (generate | refuse | clarify | escalate).
+"""Chat endpoint — retrieve -> rerank -> evaluate -> (generate | partial-answer | clarify | refuse).
 
-Refusal-first: the eval layer runs before generation. If it says no, no LLM call is made.
+Refusal-first: the eval layer runs before generation. If the scope is denied,
+no LLM call is made. For low-confidence-but-in-scope queries we now run a
+'partial-answer' generation that names the gap and points at the authoritative
+source — better than a bare clarifier when retrieval is thin but plausible.
+
 Every request carries request_id + trace_id for observability and audit.
+Every turn (user + assistant) is persisted to chat_turns for conversation memory.
 """
 from __future__ import annotations
 
@@ -17,12 +22,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_session
 from app.eval.evaluator import default_evaluator
 from app.eval.types import Decision, EvalDecision
-from app.models.student import StudentModel
+from app.models.student import ChatTurnModel, ChatTurnOut, StudentModel
 from app.rag.generator import generate_answer
 from app.rag.reranker import rerank
 from app.rag.retriever import retrieve
 
 router = APIRouter()
+
+# How many prior turns to feed the LLM. Keeps the prompt small and the
+# token bill predictable; bump if conversations consistently outgrow it.
+HISTORY_TURN_LIMIT = 10
 
 
 class ChatRequest(BaseModel):
@@ -95,11 +104,41 @@ async def _persist_audit(
             "created_at": datetime.utcnow(),
         },
     )
-    await db.commit()
+
+
+async def _load_history(db: AsyncSession, student_id: uuid.UUID, limit: int) -> list[dict]:
+    """Most recent N turns for this student, ordered oldest→newest for LLM context."""
+    stmt = (
+        select(ChatTurnModel)
+        .where(ChatTurnModel.student_id == student_id)
+        .order_by(ChatTurnModel.created_at.desc())
+        .limit(limit)
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    rows = list(reversed(rows))  # chronological for the LLM
+    return [{"role": r.role, "content": r.content} for r in rows]
+
+
+async def _persist_turn(
+    db: AsyncSession,
+    *,
+    student_id: uuid.UUID,
+    role: str,
+    content: str,
+    eval_decision: str | None = None,
+) -> None:
+    db.add(
+        ChatTurnModel(
+            student_id=student_id,
+            role=role,
+            content=content,
+            eval_decision=eval_decision,
+        )
+    )
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(
+async def chat_endpoint(
     req: ChatRequest,
     db: AsyncSession = Depends(get_session),
 ) -> ChatResponse:
@@ -128,6 +167,8 @@ async def chat(
         "location": student_model.location,
         "goals": student_model.goals,
     }
+
+    history = await _load_history(db, sid, HISTORY_TURN_LIMIT)
 
     # TODO Phase 5: language normalization sits here
     query = req.message
@@ -159,6 +200,8 @@ async def chat(
         model_used="groq/llama-3.3-70b-versatile",
     )
 
+    await _persist_turn(db, student_id=sid, role="user", content=query)
+
     base = dict(
         request_id=request_id,
         trace_id=trace_id,
@@ -167,25 +210,93 @@ async def chat(
         reason=decision.reason,
     )
 
+    async def _finalize(resp: ChatResponse) -> ChatResponse:
+        # Persist assistant turn (only when there's a real answer to remember)
+        if resp.answer:
+            await _persist_turn(
+                db,
+                student_id=sid,
+                role="assistant",
+                content=resp.answer,
+                eval_decision=str(resp.decision),
+            )
+        await db.commit()
+        return resp
+
     if decision.decision == Decision.PROCEED:
-        answer = await generate_answer(query=query, retrieved=retrieved, student=student)
-        return ChatResponse(**base, answer=answer, sources=sources)
+        answer = await generate_answer(
+            query=query,
+            retrieved=retrieved,
+            student=student,
+            history=history,
+            mode="full",
+        )
+        return await _finalize(ChatResponse(**base, answer=answer, sources=sources))
 
     if decision.decision == Decision.LOW_CONFIDENCE:
-        return ChatResponse(
-            **base,
-            clarification_needed=True,
-            clarifying_question=decision.clarifying_question,
+        # Partial-answer path: retrieval is thin but plausible — give a gap-honest
+        # answer pointing at the authoritative source, rather than a bare clarifier.
+        if decision.debug.get("partial_answer"):
+            answer = await generate_answer(
+                query=query,
+                retrieved=retrieved,
+                student=student,
+                history=history,
+                mode="partial",
+            )
+            return await _finalize(ChatResponse(**base, answer=answer, sources=sources))
+        # Otherwise: pure clarifier, no generation.
+        return await _finalize(
+            ChatResponse(
+                **base,
+                clarification_needed=True,
+                clarifying_question=decision.clarifying_question,
+            )
         )
 
     if decision.decision == Decision.OUT_OF_SCOPE:
-        return ChatResponse(**base, answer=decision.refusal_message)
+        return await _finalize(ChatResponse(**base, answer=decision.refusal_message))
 
     if decision.decision == Decision.ESCALATE:
-        # TODO Phase 6: attach matched consultancy partners
-        return ChatResponse(
-            **base,
-            answer=decision.refusal_message or "This is worth talking to a real consultancy about.",
+        # No consultancy attachment — point at the official portal instead.
+        return await _finalize(
+            ChatResponse(
+                **base,
+                answer=decision.refusal_message
+                or "This step happens on the official government / university portal — not through a consultancy.",
+            )
         )
 
     raise HTTPException(status_code=500, detail="unknown_eval_decision")
+
+
+@router.get("/history/{student_id}", response_model=list[ChatTurnOut])
+async def chat_history(
+    student_id: str,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_session),
+) -> list[ChatTurnOut]:
+    """Return chronological chat history for a student. Used by frontend on /chat mount."""
+    try:
+        sid = uuid.UUID(student_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="invalid_student_id")
+
+    stmt = (
+        select(ChatTurnModel)
+        .where(ChatTurnModel.student_id == sid)
+        .order_by(ChatTurnModel.created_at.desc())
+        .limit(min(max(limit, 1), 200))
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    rows = list(reversed(rows))
+    return [
+        ChatTurnOut(
+            id=str(r.id),
+            role=r.role,  # type: ignore[arg-type]
+            content=r.content,
+            eval_decision=r.eval_decision,
+            created_at=r.created_at,
+        )
+        for r in rows
+    ]

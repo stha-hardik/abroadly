@@ -72,9 +72,23 @@ CREATE TABLE IF NOT EXISTS chat_audit (
 );
 """
 
+_CREATE_CHAT_TURNS = """
+CREATE TABLE IF NOT EXISTS chat_turns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    eval_decision TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_chat_turns_student_created
+    ON chat_turns (student_id, created_at);
+"""
+
 
 async def create_tables() -> None:
     """Create all application tables if they don't exist."""
     async with engine.begin() as conn:
         await conn.execute(text(_CREATE_STUDENTS))
         await conn.execute(text(_CREATE_CHAT_AUDIT))
+        await conn.execute(text(_CREATE_CHAT_TURNS))

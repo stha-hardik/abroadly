@@ -1,14 +1,17 @@
 # Abroadly
 
-AI-powered intake layer between Nepali students and study-abroad consultancies.
+Free, opensource AI support for students from Nepal (and South Asia) who want to study abroad.
 
-Free AI guidance (country fit, scholarships, document help) — qualified students get routed to partner consultancies. Revenue is referral commission.
+Most consultancies charge significant fees for advice and document help that students can do themselves with the right guidance and direct links to the official sources. Abroadly is the alternative: an AI that's grounded in real study-abroad knowledge, refuses to guess when it doesn't know, and points students at the actual official portals (universities, embassies, IRCC / DHA / UCAS / Common App / Education USA / DAAD) instead of routing them through paid middlemen.
 
 **Live:** http://abroadly.online
+**License:** MIT (see [LICENSE](LICENSE))
 
-## Status
+## Why this exists
 
-Phase 4 — deployed to a Hostinger VPS, end-to-end flow working. Next up: seed the knowledge base, harden infra (SSL, systemd-only deploys), then Phase 5 (Nepali normalization) and Phase 6 (consultancy matching engine + referral logging).
+A typical Nepali student pays NPR 50,000–200,000 to a consultancy for help that's mostly: explaining IELTS bands, comparing universities, drafting an SOP, listing documents, and answering visa questions. All of that information is public. Abroadly makes it free, in plain language, in the student's preferred mix of English and Nepali/Hinglish.
+
+The core technical idea is **refusal-first**: the AI doesn't answer when it doesn't have the evidence. That's the trust contract — students can rely on the answers they do get, and never get sent to fill out a visa form by a model hallucinating the deadline.
 
 ## Stack
 
@@ -19,16 +22,12 @@ Phase 4 — deployed to a Hostinger VPS, end-to-end flow working. Next up: seed 
 
 ## Read first
 
+- `AGENTS.md` — briefing for any AI collaborator (Claude, Codex, Cursor, etc.)
 - `docs/(C) ARCHITECTURE.md` — system shape and data flows
 - `docs/(C) EVAL-LAYER-SPEC.md` — the refusal-first eval layer (the killer feature)
 - `docs/(C) ROADMAP.md` — phased build plan
-- `infra/DEPLOY.md` — VPS deployment guide
-- `PROMPT_FOR_CLAUDE_MAX.md` — briefing for AI collaborators continuing the build
-
-## Roles
-
-- **Hardik** — backend architecture (`backend/`, `docs/`, `infra/`)
-- **Precious** — UI/UX + business comms (`frontend/`, partner outreach)
+- `infra/DEPLOY.md` — VPS deployment guide + GitHub Actions auto-deploy
+- `PROMPT_FOR_CLAUDE_MAX.md` — strategic briefing for AI sessions continuing the build
 
 ## Local dev
 
@@ -54,4 +53,8 @@ App at http://localhost:3000
 
 ## Deploy
 
-See `infra/DEPLOY.md`. After first-time setup, every deploy is `./deploy.sh` on the VPS.
+See `infra/DEPLOY.md`. The default path is GitHub Actions auto-deploy on push to `main`; manual `./deploy.sh` on the VPS is the escape hatch.
+
+## Contributing
+
+Opensource — issues and PRs welcome. Read `AGENTS.md` and `docs/(C) ARCHITECTURE.md` first; the architecture decisions (refusal-first eval, provider abstraction, per-student Chroma isolation) are load-bearing and shouldn't be circumvented without discussion.

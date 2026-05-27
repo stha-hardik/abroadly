@@ -1,4 +1,4 @@
-"""Student schemas (pydantic) + SQLAlchemy ORM model."""
+"""Student + ChatTurn schemas (pydantic) + SQLAlchemy ORM models."""
 from __future__ import annotations
 
 import uuid
@@ -6,11 +6,12 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy import Column, Float, String, Text
+from sqlalchemy import Column, Float, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 from sqlalchemy.orm import DeclarativeBase
 
 EducationLevel = Literal["plus_two", "a_levels", "bba", "bachelors", "other"]
+ChatRole = Literal["user", "assistant"]
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +36,21 @@ class StudentModel(Base):
     goals = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
     updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+
+
+class ChatTurnModel(Base):
+    __tablename__ = "chat_turns"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    student_id = Column(UUID(as_uuid=True), ForeignKey("students.id"), nullable=False)
+    role = Column(String(16), nullable=False)  # "user" | "assistant"
+    content = Column(Text, nullable=False)
+    eval_decision = Column(String(32), nullable=True)  # null for user turns
+    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_chat_turns_student_created", "student_id", "created_at"),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -73,3 +89,13 @@ class StudentOut(StudentBase):
     id: str
     created_at: datetime
     updated_at: datetime
+
+
+class ChatTurnOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    role: ChatRole
+    content: str
+    eval_decision: str | None = None
+    created_at: datetime

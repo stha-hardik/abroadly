@@ -1,7 +1,13 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { chat, uploadFile, type ChatResponse, type ChatSource } from "@/lib/api";
+import {
+  chat,
+  uploadFile,
+  getChatHistory,
+  type ChatResponse,
+  type ChatSource,
+} from "@/lib/api";
 
 type MessageRole = "user" | "ai" | "upload";
 
@@ -53,8 +59,8 @@ function AiResponseBubble({ response }: { response: ChatResponse }) {
   if (response.decision === "escalate") {
     return (
       <div className="max-w-xl bg-blue-950/60 border border-blue-600/60 rounded-2xl px-4 py-3 space-y-1">
-        <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Refer to consultancy</p>
-        <p className="text-blue-200 text-sm">{response.answer}</p>
+        <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Use the official portal</p>
+        <p className="text-blue-200 text-sm whitespace-pre-wrap">{response.answer}</p>
       </div>
     );
   }
@@ -105,6 +111,32 @@ export default function ChatPage() {
       return;
     }
     setStudentId(sid);
+    // Load prior conversation turns so refresh doesn't wipe the thread.
+    getChatHistory(sid)
+      .then((turns) => {
+        const restored: Message[] = turns.map((t) =>
+          t.role === "user"
+            ? { role: "user", text: t.content }
+            : {
+                role: "ai",
+                response: {
+                  request_id: t.id,
+                  trace_id: t.id,
+                  decision: (t.eval_decision as ChatResponse["decision"]) || "proceed",
+                  confidence: 1,
+                  answer: t.content,
+                  clarifying_question: null,
+                  clarification_needed: false,
+                  sources: [],
+                  reason: "history",
+                },
+              }
+        );
+        setMessages(restored);
+      })
+      .catch(() => {
+        /* history is best-effort; fail silently */
+      });
   }, [router]);
 
   useEffect(() => {

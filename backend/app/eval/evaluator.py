@@ -62,30 +62,41 @@ class Evaluator:
             )
 
         # 4. Retrieval too weak
+        #
+        # Two-tier behavior:
+        #   - PARTIAL_ANSWER_MIN_SCORE <= retrieval < MIN_RETRIEVAL_SCORE
+        #     → still generate, but in 'partial' mode (gap-honest + official-source pointer).
+        #     The eval still returns LOW_CONFIDENCE; chat.py reads debug.partial_answer
+        #     to decide whether to run the generator.
+        #   - retrieval < PARTIAL_ANSWER_MIN_SCORE → pure clarifier, no generation.
         if retrieval_score < policies.MIN_RETRIEVAL_SCORE:
+            partial = retrieval_score >= policies.PARTIAL_ANSWER_MIN_SCORE
+            debug["partial_answer"] = partial
             return EvalDecision(
                 decision=Decision.LOW_CONFIDENCE,
-                reason="retrieval_below_threshold",
+                reason="retrieval_below_threshold_partial" if partial else "retrieval_below_threshold",
                 confidence=confidence,
                 retrieval_score=retrieval_score,
                 grounding_score=ground,
                 scope_label=scope,
-                clarification_needed=True,
-                clarifying_question=self._pick_clarifier(student),
+                clarification_needed=not partial,
+                clarifying_question=None if partial else self._pick_clarifier(student),
                 debug=debug,
             )
 
-        # 5. Grounding too weak
+        # 5. Grounding too weak — same two-tier logic
         if ground < policies.MIN_GROUNDING_SCORE:
+            partial = retrieval_score >= policies.MIN_RETRIEVAL_SCORE  # retrieval was OK; only grounding is thin
+            debug["partial_answer"] = partial
             return EvalDecision(
                 decision=Decision.LOW_CONFIDENCE,
-                reason="grounding_below_threshold",
+                reason="grounding_below_threshold_partial" if partial else "grounding_below_threshold",
                 confidence=confidence,
                 retrieval_score=retrieval_score,
                 grounding_score=ground,
                 scope_label=scope,
-                clarification_needed=True,
-                clarifying_question=policies.CLARIFYING_TEMPLATES["low_evidence"],
+                clarification_needed=not partial,
+                clarifying_question=None if partial else policies.CLARIFYING_TEMPLATES["low_evidence"],
                 debug=debug,
             )
 

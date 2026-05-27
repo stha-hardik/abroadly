@@ -6,7 +6,7 @@ The eval layer runs BEFORE generation. If it says no, no answer is generated. Re
 
 1. **Knows?** — Did retrieval actually return evidence relevant to the query? (retrieval-grounding, not parametric guessing.)
 2. **Reliable?** — Is the top-evidence score above threshold AND does the query-evidence overlap survive a lightweight grounding check?
-3. **In-scope?** — Is the query inside Abroadly's domain (study abroad, education paths, scholarships, docs, consultancy guidance)? Explicit deny-list: medical, legal, financial advice beyond scholarship info, personal/relationship, anything political.
+3. **In-scope?** — Is the query inside Abroadly's domain (study abroad, education paths, scholarships, application documents, visa info)? Explicit deny-list: medical, legal, financial-investment advice beyond scholarship/tuition info, personal/relationship, anything political.
 
 ## Interface (Python)
 
@@ -16,10 +16,10 @@ from enum import Enum
 from typing import Protocol
 
 class Decision(str, Enum):
-    PROCEED        = "proceed"          # generate
-    LOW_CONFIDENCE = "low_confidence"   # ask clarifying Q
+    PROCEED        = "proceed"          # generate (full mode)
+    LOW_CONFIDENCE = "low_confidence"   # clarify, OR partial-answer mode if retrieval >= PARTIAL_ANSWER_MIN_SCORE
     OUT_OF_SCOPE   = "out_of_scope"     # refuse politely
-    ESCALATE       = "escalate"         # hand to consultancy
+    ESCALATE       = "escalate"         # high-stakes action → point at official government / university portal
 
 @dataclass(frozen=True)
 class RetrievedChunk:
@@ -89,7 +89,7 @@ retrieve -> rerank -> eval -> generate
 
 - OUT_OF_SCOPE: "I can only help with study-abroad guidance. For X, please talk to a qualified professional."
 - LOW_CONFIDENCE: "I don't have a confident answer on that. Could you tell me more about Y?" (Y inferred from missing student-profile field or empty retrieval facet.)
-- ESCALATE: "This is a step worth talking to a real consultancy about. Want me to suggest one?"
+- ESCALATE: "This step happens on the official government / university portal — no consultancy or third party can do it for you legitimately. Tell me which country and program you're targeting and I'll point you at the exact URL and walk you through the documents."
 
 ## Why separate, not inline
 
