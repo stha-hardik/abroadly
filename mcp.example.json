@@ -5,7 +5,7 @@
       "command": "npx",
       "args": ["hostinger-api-mcp@latest"],
       "env": {
-        "HOSTINGER_API_TOKEN": "ZrI82ut1JBBhuzthi9wNyFDT4KQfSBRsGjQko2Wl5b53f470"
+        "HOSTINGER_API_TOKEN": "replace-with-your-hostinger-api-token"
       }
     }
   }

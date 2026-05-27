@@ -12,6 +12,7 @@ env/
 # Env / secrets
 .env
 keys.txt
+mcp.json
 data/
 .env.local
 .env.*.local
