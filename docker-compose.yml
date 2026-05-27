@@ -14,7 +14,7 @@ services:
       retries: 5
 
   backend:
-    image: ghcr.io/stha-hardik/abroadly/backend:latest
+    build: ./backend
     restart: unless-stopped
     depends_on:
       db:
@@ -27,7 +27,7 @@ services:
       APP_ENV: production
 
   frontend:
-    image: ghcr.io/stha-hardik/abroadly/frontend:latest
+    build: ./frontend
     restart: unless-stopped
     depends_on:
       - backend

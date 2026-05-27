@@ -1,4 +1,4 @@
-name: Build & Deploy to Hostinger VPS
+name: Deploy to Hostinger VPS
 
 on:
   push:
@@ -9,93 +9,31 @@ concurrency:
   group: deploy-vps
   cancel-in-progress: false
 
-env:
-  REGISTRY: ghcr.io
-  REPO_LOWER: stha-hardik/abroadly
-
 jobs:
-  build-and-push:
+  deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: read
-      packages: write
-
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & push frontend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          push: true
-          tags: ghcr.io/${{ env.REPO_LOWER }}/frontend:latest
-
-      - name: Build & push backend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          push: true
-          tags: ghcr.io/${{ env.REPO_LOWER }}/backend:latest
-
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Deploy Hostinger Docker project
-        env:
-          HOSTINGER_VM_ID: ${{ secrets.HOSTINGER_VM_ID }}
-          HOSTINGER_PROJECT_NAME: ${{ secrets.HOSTINGER_PROJECT_NAME }}
-          HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Configure SSH
         run: |
-          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
-          update_code=$(curl -sS -o /tmp/hostinger-update.json -w "%{http_code}" -X POST \
-            "https://developers.hostinger.com/api/vps/v1/virtual-machines/${{ secrets.HOSTINGER_VM_ID }}/docker/${{ secrets.HOSTINGER_PROJECT_NAME }}/update" \
-            -H "Authorization: Bearer ${HOSTINGER_API_TOKEN}" \
-            -H "Content-Type: application/json")
-
-          if [ "$update_code" -ge 200 ] && [ "$update_code" -lt 300 ]; then
-            echo "Updated existing Hostinger Docker project."
-            exit 0
-          fi
-
-          echo "Update returned HTTP ${update_code}; creating project from docker-compose.yml."
-          cat /tmp/hostinger-update.json || true
-
-          env_text=$(cat <<EOF
-          DB_PASSWORD=${DB_PASSWORD:-abroadly}
-          GROQ_API_KEY=${GROQ_API_KEY:-}
-          GEMINI_API_KEY=${GEMINI_API_KEY:-}
-          CORS_ORIGINS=https://abroadly.online,http://abroadly.online
-          EOF
-          )
-
-          jq -n \
-            --arg project_name "${HOSTINGER_PROJECT_NAME}" \
-            --rawfile content docker-compose.yml \
-            --arg environment "$env_text" \
-            '{project_name: $project_name, content: $content, environment: $environment}' \
-            > /tmp/hostinger-create.json
-
-          curl -sf -X POST \
-            "https://developers.hostinger.com/api/vps/v1/virtual-machines/${HOSTINGER_VM_ID}/docker" \
-            -H "Authorization: Bearer ${HOSTINGER_API_TOKEN}" \
-            -H "Content-Type: application/json" \
-            --data @/tmp/hostinger-create.json
+      - name: Deploy via SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              -o StrictHostKeyChecking=yes \
+              -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+              'cd /opt/abroadly && git pull origin main && docker compose up -d --build --remove-orphans'
 
       - name: Smoke-test live site
         run: |
@@ -106,5 +44,5 @@ jobs:
             if [ "$code" = "200" ]; then exit 0; fi
             sleep 10
           done
-          echo "Smoke test failed"
+          echo "Smoke test timed out"
           exit 1
