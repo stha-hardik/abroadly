@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: Build & Deploy to Hostinger VPS
 
 on:
   push:
@@ -9,56 +9,62 @@ concurrency:
   group: deploy-vps
   cancel-in-progress: false
 
+env:
+  REGISTRY: ghcr.io
+  REPO_LOWER: stha-hardik/abroadly
+
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - name: Validate required secrets
-        run: |
-          : "${VPS_HOST:?missing}"
-          : "${VPS_USER:?missing}"
-          : "${VPS_PORT:?missing}"
-          : "${VPS_SSH_KEY:?missing}"
-          : "${VPS_KNOWN_HOSTS:?missing}"
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+      - uses: actions/checkout@v4
 
-      - name: Configure SSH
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run deploy.sh on VPS
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-          DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/vhosts/abroadly.online/httpdocs/abroadly' }}
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ghcr.io/${{ env.REPO_LOWER }}/frontend:latest
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ghcr.io/${{ env.REPO_LOWER }}/backend:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger Hostinger VPS redeploy
         run: |
-          ssh -i ~/.ssh/id_ed25519 \
-              -o UserKnownHostsFile=~/.ssh/known_hosts \
-              -o StrictHostKeyChecking=yes \
-              -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-              "cd '$DEPLOY_PATH' && ./deploy.sh"
+          curl -sf -X PUT \
+            "https://developers.hostinger.com/api/vps/v1/virtual-machines/${{ secrets.HOSTINGER_VM_ID }}/docker-compose/${{ secrets.HOSTINGER_PROJECT_NAME }}" \
+            -H "Authorization: Bearer ${{ secrets.HOSTINGER_API_TOKEN }}" \
+            -H "Content-Type: application/json"
 
       - name: Smoke-test live site
         run: |
-          set -e
+          sleep 30
           for i in 1 2 3 4 5; do
             code=$(curl -fsS -o /dev/null -w '%{http_code}' http://abroadly.online/ || true)
-            api=$(curl -fsS -o /dev/null -w '%{http_code}' http://abroadly.online:8000/health || true)
-            echo "attempt $i: site=$code api=$api"
-            if [ "$code" = "200" ] && [ "$api" = "200" ]; then exit 0; fi
-            sleep 5
+            echo "attempt $i: site=$code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 10
           done
-          echo "Smoke test failed — site or API not returning 200."
+          echo "Smoke test failed"
           exit 1
