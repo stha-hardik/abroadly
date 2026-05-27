@@ -278,24 +278,47 @@ function SourceChip({ source }: { source: ChatSource }) {
   );
 }
 
-/* ── Text formatting ──────────────────────────────────────────────── */
+/* ── Text parsing ─────────────────────────────────────────────────── */
 
-function cleanAnswerText(raw: string): string {
-  let text = raw;
-  text = text.replace(/\[Source:\s*[^\]]*\.(?:md|txt|pdf)\s*\]/gi, "");
-  text = text.replace(/\[Source:\s*[^\]]*\]/gi, "");
-  text = text.replace(/\*\*Sources?\*\*[\s\S]*$/i, "");
-  text = text.replace(/\n{3,}/g, "\n\n");
-  return text.trim();
+interface ParsedAnswer {
+  body: string;
+  actions: { text: string; isUpload: boolean }[];
 }
 
-function FormattedText({ text }: { text: string }) {
-  const clean = cleanAnswerText(text);
-  const parts = clean.split("\n");
+function parseAnswer(raw: string): ParsedAnswer {
+  let text = raw;
+  text = text.replace(/\[Source:\s*[^\]]*\]/gi, "");
+  text = text.replace(/\n{3,}/g, "\n\n");
+
+  const actionMatch = text.match(
+    /\*\*(?:What to do next|Next steps|You might also want to ask):\*\*\s*\n([\s\S]*)/i
+  );
+
+  let body = text;
+  const actions: { text: string; isUpload: boolean }[] = [];
+
+  if (actionMatch) {
+    body = text.slice(0, actionMatch.index).trim();
+    const actionBlock = actionMatch[1];
+    const lines = actionBlock.split("\n");
+    for (const line of lines) {
+      const cleaned = line.replace(/^\s*[\*\-•]\s*/, "").replace(/^"(.+)"$/, "$1").trim();
+      if (cleaned.length > 5) {
+        const isUpload = /upload|marksheet|transcript|document|ielts|passport/i.test(cleaned);
+        actions.push({ text: cleaned, isUpload });
+      }
+    }
+  }
+
+  return { body: body.trim(), actions };
+}
+
+function FormattedBody({ text }: { text: string }) {
+  const lines = text.split("\n");
 
   return (
     <div className="chat-bubble-text">
-      {parts.map((line, i) => {
+      {lines.map((line, i) => {
         if (!line.trim()) return <br key={i} />;
 
         const isBullet = /^\s*[\*\-•]\s+/.test(line);
@@ -311,17 +334,9 @@ function FormattedText({ text }: { text: string }) {
         if (isBullet) {
           return (
             <div key={i} className="flex gap-2 pl-1 py-0.5">
-              <span className="text-[var(--ab-plum)] mt-[3px] text-[8px] shrink-0">●</span>
+              <span className="text-[var(--ab-plum)] mt-[3px] text-[8px] shrink-0">{"●"}</span>
               <span>{formatted}</span>
             </div>
-          );
-        }
-
-        if (/^\*\*Next steps:\*\*$/i.test(line.trim()) || /^\*\*You might also want to ask:\*\*$/i.test(line.trim())) {
-          return (
-            <p key={i} className="mt-3 mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-400">
-              Next steps
-            </p>
           );
         }
 
@@ -333,47 +348,45 @@ function FormattedText({ text }: { text: string }) {
 
 /* ── AI Bubble ────────────────────────────────────────────────────── */
 
-function AiResponseBubble({ response }: { response: ChatResponse }) {
+function AiResponseBubble({
+  response,
+  onAction,
+  onUploadClick,
+}: {
+  response: ChatResponse;
+  onAction: (text: string) => void;
+  onUploadClick: () => void;
+}) {
   const answer =
     response.answer ?? response.clarifying_question ?? "I need a little more context.";
-
-  const variants: Record<string, { badge: string; badgeColor: string; borderColor: string; bg: string }> = {
-    out_of_scope: {
-      badge: "Out of scope",
-      badgeColor: "text-amber-700 bg-amber-50 ring-amber-200/60",
-      borderColor: "border-amber-100",
-      bg: "bg-amber-50/40",
-    },
-    escalate: {
-      badge: "Official portal",
-      badgeColor: "text-blue-700 bg-blue-50 ring-blue-200/60",
-      borderColor: "border-blue-100",
-      bg: "bg-blue-50/40",
-    },
-    low_confidence: {
-      badge: "Clarification needed",
-      badgeColor: "text-[var(--ab-plum)] bg-purple-50 ring-purple-200/60",
-      borderColor: "border-purple-100",
-      bg: "bg-purple-50/30",
-    },
-  };
-
-  const variant = variants[response.decision];
+  const { body, actions } = parseAnswer(answer);
 
   return (
-    <div className={`chat-bubble-ai ${variant ? variant.bg : ""} ${variant ? variant.borderColor : ""}`}>
-      {variant && (
-        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset ${variant.badgeColor}`}>
-          {variant.badge}
-        </span>
-      )}
+    <div className="chat-bubble-ai">
+      <FormattedBody text={body} />
 
-      <FormattedText text={answer} />
-
-      {response.sources.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5 border-t border-gray-100 pt-3">
-          {response.sources.slice(0, 3).map((s) => (
-            <SourceChip key={s.chunk_id} source={s} />
+      {actions.length > 0 && (
+        <div className="mt-3 flex flex-col gap-1.5 border-t border-gray-100 pt-3">
+          {actions.map((action, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => action.isUpload ? onUploadClick() : onAction(action.text)}
+              className="chat-action-chip group"
+            >
+              {action.isUpload ? (
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-[var(--ab-plum)]" fill="none">
+                  <path d="M8 11V5m0 0L5.5 7.5M8 5l2.5 2.5M3 13h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-gray-400 group-hover:text-[var(--ab-plum)]" fill="none">
+                  <path d="M5 8h6M8 5v6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              )}
+              <span className={action.isUpload ? "text-[var(--ab-plum)] font-semibold" : ""}>
+                {action.text}
+              </span>
+            </button>
           ))}
         </div>
       )}
@@ -1032,7 +1045,11 @@ export default function ChatPage() {
                 return (
                   <div key={i} className="chat-row chat-row-ai" style={{ animationDelay: "0.05s" }}>
                     <AiAvatar />
-                    <AiResponseBubble response={msg.response} />
+                    <AiResponseBubble
+                      response={msg.response}
+                      onAction={(text) => sendMessage(text)}
+                      onUploadClick={() => setDocPanelOpen(true)}
+                    />
                   </div>
                 );
               })}

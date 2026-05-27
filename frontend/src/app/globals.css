@@ -216,6 +216,30 @@ body {
   color: #1a1525;
 }
 
+/* ── Action chips (next steps) ─────────────────────────────────────── */
+
+.chat-action-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #f8f7f5;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  font-size: 12px;
+  font-weight: 500;
+  color: #444;
+  text-align: left;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.chat-action-chip:hover {
+  background: #f0edff;
+  border-color: rgba(103, 61, 230, 0.15);
+  color: var(--ab-ink);
+}
+
 /* ── Source chips ───────────────────────────────────────────────────── */
 
 .chat-source-chip {
