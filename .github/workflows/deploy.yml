@@ -1,0 +1,64 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate required secrets
+        run: |
+          : "${VPS_HOST:?missing}"
+          : "${VPS_USER:?missing}"
+          : "${VPS_PORT:?missing}"
+          : "${VPS_SSH_KEY:?missing}"
+          : "${VPS_KNOWN_HOSTS:?missing}"
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Run deploy.sh on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/vhosts/abroadly.online/httpdocs/abroadly' }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              -o StrictHostKeyChecking=yes \
+              -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+              "cd '$DEPLOY_PATH' && ./deploy.sh"
+
+      - name: Smoke-test live site
+        run: |
+          set -e
+          for i in 1 2 3 4 5; do
+            code=$(curl -fsS -o /dev/null -w '%{http_code}' http://abroadly.online/ || true)
+            api=$(curl -fsS -o /dev/null -w '%{http_code}' http://abroadly.online:8000/health || true)
+            echo "attempt $i: site=$code api=$api"
+            if [ "$code" = "200" ] && [ "$api" = "200" ]; then exit 0; fi
+            sleep 5
+          done
+          echo "Smoke test failed — site or API not returning 200."
+          exit 1

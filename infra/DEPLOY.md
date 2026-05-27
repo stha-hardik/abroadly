@@ -86,14 +86,55 @@ Then open `http://abroadly.online` in a browser and complete onboarding → chat
 
 ## Ongoing deploys
 
-After first-time setup, every deploy is one command:
+There are two paths. **CI is the default for any merge to `main`.** Manual is the escape hatch for hotfixes when CI is broken or for first-time bring-up.
+
+### Path A — Auto-deploy via GitHub Actions (default)
+
+Defined in `.github/workflows/deploy.yml`. On every push to `main`:
+
+1. Runner SSHes to the VPS using a deploy key.
+2. Runs `./deploy.sh` (same script as manual).
+3. Smoke-tests `http://abroadly.online/` and `:8000/health`, fails the workflow if either returns non-200.
+
+Required GitHub repo secrets (Settings → Secrets and variables → Actions):
+
+| secret             | example value                                                 |
+| ------------------ | ------------------------------------------------------------- |
+| `VPS_HOST`         | `187.124.27.168` (or `abroadly.online`)                       |
+| `VPS_PORT`         | `22` (Hostinger sometimes uses non-standard ports — verify)   |
+| `VPS_USER`         | `root` (until we cut over to a dedicated app user)            |
+| `VPS_SSH_KEY`      | private half of the deploy keypair (ed25519, no passphrase)   |
+| `VPS_KNOWN_HOSTS`  | output of `ssh-keyscan -p <port> <host>` from a trusted box   |
+| `VPS_DEPLOY_PATH`  | optional override; defaults to `/var/www/vhosts/abroadly.online/httpdocs/abroadly` |
+
+One-time key provisioning (do once, never commit the private key anywhere):
 
 ```bash
+# locally
+ssh-keygen -t ed25519 -f ~/.ssh/abroadly_deploy -N '' -C 'github-actions-deploy'
+
+# put the public key on the VPS (via Hostinger MCP VPS_attachPublicKeyV1,
+# or manually paste into /root/.ssh/authorized_keys)
+
+# fingerprint the host for known_hosts
+ssh-keyscan -p <port> <host>     # paste output into VPS_KNOWN_HOSTS
+
+# paste private key contents (cat ~/.ssh/abroadly_deploy) into VPS_SSH_KEY
+```
+
+Trigger manually: GitHub → Actions → "Deploy to VPS" → Run workflow.
+
+### Path B — Manual SSH (escape hatch)
+
+```bash
+ssh root@abroadly.online
 cd /var/www/vhosts/abroadly.online/httpdocs/abroadly
 ./deploy.sh
 ```
 
 `deploy.sh` does: `git pull main` → reinstall any new deps → rebuild frontend → restart both systemd services → health-check.
+
+**Never run `deploy.sh` and CI deploy simultaneously** — the workflow uses a `concurrency` group to serialize itself, but it doesn't know about a human SSH session.
 
 ---
 
