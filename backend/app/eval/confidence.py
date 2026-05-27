@@ -5,16 +5,18 @@ v2: cross-encoder re-rank or NLI model.
 """
 import re
 
-_TOKEN_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9\-]{2,}")
+_TOKEN_RE = re.compile(r"[\w][\w'-]*", re.UNICODE)
 _STOP = {
     "the", "and", "for", "with", "that", "this", "what", "how", "are", "can",
     "you", "your", "from", "have", "should", "would", "could", "about", "into",
     "any", "all", "but", "not", "get", "got", "want", "need",
+    # Common romanized Nepali filler words students may type in mixed queries.
+    "ma", "ko", "ra", "lai", "ho", "cha", "chha", "mero", "malai",
 }
 
 
 def _tokens(text: str) -> set[str]:
-    return {t.lower() for t in _TOKEN_RE.findall(text) if t.lower() not in _STOP}
+    return {t.lower() for t in _TOKEN_RE.findall(text) if len(t) > 1 and t.lower() not in _STOP}
 
 
 def grounding_score(query: str, chunks: list) -> float:

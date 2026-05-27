@@ -171,11 +171,12 @@ Important files:
 - `backend/app/api/chat.py`: `/chat` and `/chat/history/{student_id}`
 - `backend/app/api/upload.py`: `/upload`
 - `backend/app/eval/`: refusal-first eval layer
-- `backend/app/rag/retriever.py`: Chroma retrieval
+- `backend/app/rag/retriever.py`: Chroma vector retrieval plus local BM25 lexical fallback/ranking
 - `backend/app/rag/generator.py`: prompt assembly
 - `backend/app/rag/llm.py`: only place Groq/Gemini SDKs should be imported
 - `backend/app/prompts/system_prompt.md`: assistant system prompt
 - `backend/tests/test_eval.py`: eval tests
+- `backend/tests/test_retriever.py`: BM25 fallback and grounding tests
 
 Backend verification:
 
@@ -196,7 +197,7 @@ The chat path is intentionally refusal-first:
 
 ```text
 normalize/query
--> retrieve from Chroma
+-> retrieve from Chroma vector search + BM25 lexical fallback
 -> rerank
 -> eval
 -> generate only if allowed
@@ -213,6 +214,8 @@ Key behavior:
 Recent backend fix:
 
 - `scope_check.py` now recognizes common study-abroad terms like `documents`, `study in`, `UK`, `Australia`, `Canada`, `admissions`, `application`, `CAS`, `CoE`, and `student permit`.
+- `retriever.py` now uses `rank-bm25==0.2.2` as a small local lexical fallback/ranking signal, so exact terms like `CAS`, `CoE`, `IELTS`, and `GTE` can surface relevant Chroma chunks even when Gemini embedding search is unavailable or weak.
+- `confidence.py` now counts short study-abroad terms such as `UK`, `CAS`, and `CoE` during grounding checks.
 - A normal question like "What documents do I need to study in the UK?" should not be `out_of_scope`.
 - With no seeded knowledge, that question currently returns `low_confidence` clarification instead of a full answer.
 - `llm.py` now returns a graceful provider-configuration message if both Groq and Gemini keys are absent.
@@ -335,7 +338,8 @@ When Presish asks for knowledge/research/replies:
 
 - Build official-source content.
 - Seed Chroma with structured, cited chunks.
-- Improve prompt behavior only after retrieval data exists.
+- Improve retrieval and prompt behavior only after retrieval data exists.
+- Prefer narrow, testable additions before large framework swaps. A LiteLLM provider layer is architecturally useful, but a March 2026 PyPI compromise means it should only be considered with pinned/locked dependencies and extra review.
 - The assistant should be helpful but gap-honest.
 
 ## Immediate Backend Priorities
@@ -346,4 +350,5 @@ When Presish asks for knowledge/research/replies:
 4. Implement/upgrade `backend/scripts/seed_knowledge.py`.
 5. Verify generated replies with real student questions.
 6. Improve Nepali-English mixed question handling.
-7. Add tests for chat decisions, LLM fallback, and API route behavior.
+7. Migrate embeddings from deprecated `google.generativeai` to the newer Google Gen AI SDK.
+8. Add tests for chat decisions, LLM fallback, and API route behavior.
