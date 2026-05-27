@@ -23,6 +23,7 @@ from app.core.db import get_session
 from app.eval.evaluator import default_evaluator
 from app.eval.types import Decision, EvalDecision
 from app.models.student import ChatTurnModel, ChatTurnOut, StudentModel
+from app.normalizer import default_normalizer
 from app.rag.generator import generate_answer
 from app.rag.reranker import rerank
 from app.rag.retriever import retrieve
@@ -67,21 +68,23 @@ async def _persist_audit(
     trace_id: str,
     student_id: str,
     query: str,
+    normalized_query: str | None,
     chunk_ids: list[str],
     retrieval_scores: list[float],
     eval_decision: str,
     eval_confidence: float,
     model_used: str,
 ) -> None:
-    """Async INSERT into chat_audit."""
+    """Async INSERT into chat_audit. `query` is the raw student input;
+    `normalized_query` is the post-normalizer English version used for retrieval."""
     stmt = text(
         """
         INSERT INTO chat_audit
-            (request_id, trace_id, student_id, query,
+            (request_id, trace_id, student_id, query, normalized_query,
              chunk_ids, retrieval_scores,
              eval_decision, eval_confidence, model_used, created_at)
         VALUES
-            (:request_id, :trace_id, :student_id, :query,
+            (:request_id, :trace_id, :student_id, :query, :normalized_query,
              :chunk_ids, :retrieval_scores,
              :eval_decision, :eval_confidence, :model_used, :created_at)
         """
@@ -96,6 +99,7 @@ async def _persist_audit(
             "trace_id": trace_id,
             "student_id": student_id,
             "query": query,
+            "normalized_query": normalized_query,
             "chunk_ids": chunk_ids,
             "retrieval_scores": retrieval_scores,
             "eval_decision": eval_decision,
@@ -170,8 +174,12 @@ async def chat_endpoint(
 
     history = await _load_history(db, sid, HISTORY_TURN_LIMIT)
 
-    # TODO Phase 5: language normalization sits here
-    query = req.message
+    # Phase 5 — language normalization. Hinglish / Nepali-romanized in,
+    # clean English out. Pure-English passes through unchanged.
+    normalization = await default_normalizer.normalize(req.message)
+    original_message = normalization.original
+    query = normalization.normalized
+    normalized_query_for_audit = query if normalization.was_changed else None
 
     retrieved = await retrieve(query=query, student_id=req.student_id)
     retrieved = await rerank(query=query, retrieved=retrieved)
@@ -192,7 +200,8 @@ async def chat_endpoint(
         request_id=request_id,
         trace_id=trace_id,
         student_id=req.student_id,
-        query=query,
+        query=original_message,
+        normalized_query=normalized_query_for_audit,
         chunk_ids=[c.id for c in retrieved.chunks],
         retrieval_scores=[c.score for c in retrieved.chunks],
         eval_decision=decision.decision,
@@ -200,7 +209,8 @@ async def chat_endpoint(
         model_used="groq/llama-3.3-70b-versatile",
     )
 
-    await _persist_turn(db, student_id=sid, role="user", content=query)
+    # User turn stored as what they actually typed — preserves their voice in history.
+    await _persist_turn(db, student_id=sid, role="user", content=original_message)
 
     base = dict(
         request_id=request_id,

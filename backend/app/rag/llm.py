@@ -29,6 +29,14 @@ class LLMProvider(Protocol):
         mode: str = "full",
     ) -> str: ...
 
+    async def normalize(self, system: str, query: str) -> str: ...
+
+
+# Tuning for the normalizer call — much smaller + cheaper than generate().
+NORMALIZER_MAX_TOKENS = 200
+NORMALIZER_TEMPERATURE = 0.0  # deterministic; we want consistent translations
+NORMALIZER_MODEL = "gemini-2.0-flash"  # Flash variant — fast, cheap, multilingual
+
 
 class GroqGeminiLLM:
     """Groq llama-3.3-70b primary; Gemini flash fallback."""
@@ -135,6 +143,35 @@ class GroqGeminiLLM:
         chat = model.start_chat(history=gemini_history)
         resp = await chat.send_message_async(self._user_payload(profile, context, query))
         return resp.text.strip()
+
+    # ------------------------------------------------------------------
+    # Normalization — Phase 5 hook. Cheap dedicated Gemini Flash call.
+    # ------------------------------------------------------------------
+    async def normalize(self, system: str, query: str) -> str:
+        """Translate a Hinglish / Nepali-romanized query to clean English.
+
+        Pure-English input must be returned unchanged (the system prompt
+        instructs the model to do this). Raises on hard failure; callers
+        (app.normalizer.LLMNormalizer) catch and fall through to original.
+        """
+        if not settings.gemini_api_key:
+            # Without Gemini configured, signal "no-op" by raising — the
+            # caller's except branch returns the original unchanged.
+            raise RuntimeError("normalizer_unavailable: no GEMINI_API_KEY")
+
+        import google.generativeai as genai
+
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel(
+            NORMALIZER_MODEL,
+            system_instruction=system,
+            generation_config={
+                "temperature": NORMALIZER_TEMPERATURE,
+                "max_output_tokens": NORMALIZER_MAX_TOKENS,
+            },
+        )
+        resp = await model.generate_content_async(query)
+        return (resp.text or "").strip()
 
 
 # Single instance — swap this to change the provider for the whole app.
