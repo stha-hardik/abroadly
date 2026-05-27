@@ -49,10 +49,19 @@ export interface Stats {
   students_this_week: number;
   chats_today: number;
   ai_paused_count: number;
+  total_documents: number;
+  top_countries: { country: string; count: number }[];
+  recent_students: { id: string; name: string; email: string; created_at: string }[];
 }
 
 export async function getStats(): Promise<Stats> {
   return adminFetch<Stats>("/stats");
+}
+
+export interface LastMessage {
+  content: string;
+  role: string;
+  created_at: string;
 }
 
 export interface StudentListItem {
@@ -62,13 +71,19 @@ export interface StudentListItem {
   phone: string | null;
   education_level: string;
   target_countries: string[];
+  preferred_field: string | null;
+  gpa: number | null;
   ai_paused: boolean;
   created_at: string;
   chat_count: number;
+  doc_count: number;
+  last_message: LastMessage | null;
 }
 
-export async function getStudents(page = 1): Promise<{ items: StudentListItem[]; total: number }> {
-  return adminFetch(`/students?page=${page}&per_page=20`);
+export async function getStudents(page = 1, search = ""): Promise<{ items: StudentListItem[]; total: number }> {
+  const params = new URLSearchParams({ page: String(page), per_page: "20" });
+  if (search) params.set("search", search);
+  return adminFetch(`/students?${params}`);
 }
 
 export interface StudentDetail {
@@ -85,6 +100,8 @@ export interface StudentDetail {
   ai_paused: boolean;
   created_at: string;
   updated_at: string;
+  chat_count: number;
+  doc_count: number;
 }
 
 export async function getStudent(id: string): Promise<StudentDetail> {
@@ -101,6 +118,21 @@ export interface ChatTurn {
 
 export async function getStudentChat(id: string): Promise<ChatTurn[]> {
   return adminFetch(`/students/${id}/chat`);
+}
+
+export interface DocItem {
+  filename: string;
+  doc_id: string;
+  size_bytes: number;
+  uploaded_at: string;
+}
+
+export async function getStudentDocs(id: string): Promise<DocItem[]> {
+  return adminFetch(`/students/${id}/documents`);
+}
+
+export function getDocDownloadUrl(studentId: string, docId: string): string {
+  return `${BASE}/students/${studentId}/documents/${docId}/download`;
 }
 
 export async function toggleAI(id: string, paused: boolean): Promise<void> {
