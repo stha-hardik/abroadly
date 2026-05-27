@@ -50,12 +50,52 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Trigger Hostinger VPS redeploy
+      - uses: actions/checkout@v4
+
+      - name: Deploy Hostinger Docker project
+        env:
+          HOSTINGER_VM_ID: ${{ secrets.HOSTINGER_VM_ID }}
+          HOSTINGER_PROJECT_NAME: ${{ secrets.HOSTINGER_PROJECT_NAME }}
+          HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          curl -sf -X POST \
+          set -euo pipefail
+
+          update_code=$(curl -sS -o /tmp/hostinger-update.json -w "%{http_code}" -X POST \
             "https://developers.hostinger.com/api/vps/v1/virtual-machines/${{ secrets.HOSTINGER_VM_ID }}/docker/${{ secrets.HOSTINGER_PROJECT_NAME }}/update" \
-            -H "Authorization: Bearer ${{ secrets.HOSTINGER_API_TOKEN }}" \
-            -H "Content-Type: application/json"
+            -H "Authorization: Bearer ${HOSTINGER_API_TOKEN}" \
+            -H "Content-Type: application/json")
+
+          if [ "$update_code" -ge 200 ] && [ "$update_code" -lt 300 ]; then
+            echo "Updated existing Hostinger Docker project."
+            exit 0
+          fi
+
+          echo "Update returned HTTP ${update_code}; creating project from docker-compose.yml."
+          cat /tmp/hostinger-update.json || true
+
+          env_text=$(cat <<EOF
+          DB_PASSWORD=${DB_PASSWORD:-abroadly}
+          GROQ_API_KEY=${GROQ_API_KEY:-}
+          GEMINI_API_KEY=${GEMINI_API_KEY:-}
+          CORS_ORIGINS=https://abroadly.online,http://abroadly.online
+          EOF
+          )
+
+          jq -n \
+            --arg project_name "${HOSTINGER_PROJECT_NAME}" \
+            --rawfile content docker-compose.yml \
+            --arg environment "$env_text" \
+            '{project_name: $project_name, content: $content, environment: $environment}' \
+            > /tmp/hostinger-create.json
+
+          curl -sf -X POST \
+            "https://developers.hostinger.com/api/vps/v1/virtual-machines/${HOSTINGER_VM_ID}/docker" \
+            -H "Authorization: Bearer ${HOSTINGER_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/hostinger-create.json
 
       - name: Smoke-test live site
         run: |
