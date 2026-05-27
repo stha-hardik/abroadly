@@ -50,21 +50,20 @@ class GroqGeminiLLM:
         history: ChatHistory | None = None,
         mode: str = "full",
     ) -> str:
+        import logging
+        log = logging.getLogger("abroadly.llm")
+
         if settings.groq_api_key:
             try:
                 return await self._groq(system, context, profile, query, history or [], mode)
-            except Exception:
-                pass
+            except Exception as e:
+                log.error("Groq failed: %s: %s", type(e).__name__, e)
         if settings.gemini_api_key:
             try:
                 return await self._gemini(system, context, profile, query, history or [], mode)
-            except Exception:
-                pass
-        return (
-            "I can route your study-abroad question, but full answer generation is not configured yet. "
-            "Please set GROQ_API_KEY or GEMINI_API_KEY on the server, then try again. "
-            "Until then, use the official university or immigration portal for decisions."
-        )
+            except Exception as e:
+                log.error("Gemini failed: %s: %s", type(e).__name__, e)
+        return "Sorry, I'm having trouble connecting right now. Please try again in a moment."
 
     @staticmethod
     def _system_with_mode(system: str, mode: str) -> str:
@@ -101,21 +100,25 @@ class GroqGeminiLLM:
 
         client = AsyncGroq(api_key=settings.groq_api_key)
         messages: list[dict] = [{"role": "system", "content": self._system_with_mode(system, mode)}]
-        # Replay prior turns (already user/assistant shaped).
-        for turn in history:
+        for turn in history[-6:]:
             role = turn.get("role")
             content = turn.get("content")
             if role in ("user", "assistant") and content:
                 messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": self._user_payload(profile, context, query)})
 
-        resp = await client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
-        )
-        return resp.choices[0].message.content.strip()
+        for model in ("llama-3.3-70b-versatile", "llama-3.1-8b-instant"):
+            try:
+                resp = await client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=TEMPERATURE,
+                    max_tokens=MAX_TOKENS,
+                )
+                return resp.choices[0].message.content.strip()
+            except Exception:
+                continue
+        raise RuntimeError("All Groq models failed")
 
     async def _gemini(
         self,
@@ -126,52 +129,51 @@ class GroqGeminiLLM:
         history: ChatHistory,
         mode: str,
     ) -> str:
-        import google.generativeai as genai
+        from google import genai
 
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel(
-            "gemini-1.5-flash",
-            system_instruction=self._system_with_mode(system, mode),
-            generation_config={"temperature": TEMPERATURE, "max_output_tokens": MAX_TOKENS},
+        client = genai.Client(api_key=settings.gemini_api_key)
+        contents = []
+        for t in history[-6:]:
+            role = t.get("role")
+            content = t.get("content")
+            if role in ("user", "assistant") and content:
+                contents.append(genai.types.Content(
+                    role="user" if role == "user" else "model",
+                    parts=[genai.types.Part(text=content)],
+                ))
+        contents.append(genai.types.Content(
+            role="user",
+            parts=[genai.types.Part(text=self._user_payload(profile, context, query))],
+        ))
+
+        response = await client.aio.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=contents,
+            config=genai.types.GenerateContentConfig(
+                system_instruction=self._system_with_mode(system, mode),
+                temperature=TEMPERATURE,
+                max_output_tokens=MAX_TOKENS,
+            ),
         )
-        # Gemini expects "user" / "model" role names.
-        gemini_history = [
-            {"role": "user" if t["role"] == "user" else "model", "parts": [t["content"]]}
-            for t in history
-            if t.get("role") in ("user", "assistant") and t.get("content")
-        ]
-        chat = model.start_chat(history=gemini_history)
-        resp = await chat.send_message_async(self._user_payload(profile, context, query))
-        return resp.text.strip()
+        return response.text.strip()
 
-    # ------------------------------------------------------------------
-    # Normalization — Phase 5 hook. Cheap dedicated Gemini Flash call.
-    # ------------------------------------------------------------------
     async def normalize(self, system: str, query: str) -> str:
-        """Translate a Hinglish / Nepali-romanized query to clean English.
-
-        Pure-English input must be returned unchanged (the system prompt
-        instructs the model to do this). Raises on hard failure; callers
-        (app.normalizer.LLMNormalizer) catch and fall through to original.
-        """
         if not settings.gemini_api_key:
-            # Without Gemini configured, signal "no-op" by raising — the
-            # caller's except branch returns the original unchanged.
             raise RuntimeError("normalizer_unavailable: no GEMINI_API_KEY")
 
-        import google.generativeai as genai
+        from google import genai
 
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel(
-            NORMALIZER_MODEL,
-            system_instruction=system,
-            generation_config={
-                "temperature": NORMALIZER_TEMPERATURE,
-                "max_output_tokens": NORMALIZER_MAX_TOKENS,
-            },
+        client = genai.Client(api_key=settings.gemini_api_key)
+        response = await client.aio.models.generate_content(
+            model=NORMALIZER_MODEL,
+            contents=query,
+            config=genai.types.GenerateContentConfig(
+                system_instruction=system,
+                temperature=NORMALIZER_TEMPERATURE,
+                max_output_tokens=NORMALIZER_MAX_TOKENS,
+            ),
         )
-        resp = await model.generate_content_async(query)
-        return (resp.text or "").strip()
+        return (response.text or "").strip()
 
 
 # Single instance — swap this to change the provider for the whole app.
