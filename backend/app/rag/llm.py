@@ -47,7 +47,16 @@ class GroqGeminiLLM:
                 return await self._groq(system, context, profile, query, history or [], mode)
             except Exception:
                 pass
-        return await self._gemini(system, context, profile, query, history or [], mode)
+        if settings.gemini_api_key:
+            try:
+                return await self._gemini(system, context, profile, query, history or [], mode)
+            except Exception:
+                pass
+        return (
+            "I can route your study-abroad question, but full answer generation is not configured yet. "
+            "Please set GROQ_API_KEY or GEMINI_API_KEY on the server, then try again. "
+            "Until then, use the official university or immigration portal for decisions."
+        )
 
     @staticmethod
     def _system_with_mode(system: str, mode: str) -> str:

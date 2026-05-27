@@ -35,20 +35,7 @@ class Evaluator:
                 debug=debug,
             )
 
-        # 2. Unknown scope under strict mode -> refuse
-        if scope == "unknown" and policies.SCOPE_STRICT:
-            return EvalDecision(
-                decision=Decision.OUT_OF_SCOPE,
-                reason="scope_unknown_strict",
-                confidence=0.0,
-                retrieval_score=retrieval_score,
-                grounding_score=ground,
-                scope_label=scope,
-                refusal_message=policies.REFUSAL_TEMPLATES["default"],
-                debug=debug,
-            )
-
-        # 3. High-stakes escalation
+        # 2. High-stakes escalation
         if any(kw in query.lower() for kw in ("file visa", "pay tuition", "send money", "sign contract")):
             return EvalDecision(
                 decision=Decision.ESCALATE,
@@ -58,6 +45,19 @@ class Evaluator:
                 grounding_score=ground,
                 scope_label=scope,
                 refusal_message=policies.ESCALATE_MESSAGE,
+                debug=debug,
+            )
+
+        # 3. Unknown scope under strict mode -> refuse
+        if scope == "unknown" and policies.SCOPE_STRICT:
+            return EvalDecision(
+                decision=Decision.OUT_OF_SCOPE,
+                reason="scope_unknown_strict",
+                confidence=0.0,
+                retrieval_score=retrieval_score,
+                grounding_score=ground,
+                scope_label=scope,
+                refusal_message=policies.REFUSAL_TEMPLATES["default"],
                 debug=debug,
             )
 

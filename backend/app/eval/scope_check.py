@@ -12,10 +12,28 @@ _DENY_PATTERNS: list[tuple[str, re.Pattern]] = [
 
 _ALLOW_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("scholarship", re.compile(r"\b(scholarship|grant|funding|tuition waiver|stipend)\b", re.I)),
-    ("visa_info", re.compile(r"\b(visa|i-?20|sop|statement of purpose|cas letter)\b", re.I)),
-    ("documents", re.compile(r"\b(transcript|certificate|ielts|toefl|pte|gre|gmat|sat)\b", re.I)),
-    ("study_abroad", re.compile(r"\b(study abroad|university|college|admission|apply|degree|masters|bachelor)\b", re.I)),
-    ("education", re.compile(r"\b(education|course|program|major|field|career)\b", re.I)),
+    (
+        "visa_info",
+        re.compile(
+            r"\b(visa|student permit|study permit|i-?20|cas|coe|immiaccount|sop|statement of purpose)\b",
+            re.I,
+        ),
+    ),
+    (
+        "documents",
+        re.compile(
+            r"\b(document|documents|checklist|transcript|certificate|ielts|toefl|pte|gre|gmat|sat)\b",
+            re.I,
+        ),
+    ),
+    (
+        "study_abroad",
+        re.compile(
+            r"\b(study abroad|study in|study at|abroad|overseas|university|college|admission|admissions|apply|application|intake|ucas|common app|degree|masters|bachelor|uk|united kingdom|australia|canada|usa|united states|germany|new zealand)\b",
+            re.I,
+        ),
+    ),
+    ("education", re.compile(r"\b(education|course|program|programme|major|field|career|tuition)\b", re.I)),
 ]
 
 
