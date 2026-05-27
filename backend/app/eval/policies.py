@@ -12,7 +12,7 @@ SCOPE_STRICT = settings.eval_scope_strict
 # Confidence band below MIN_RETRIEVAL_SCORE where we still try to answer
 # with the partial-answer mode (generation runs, but with a stronger
 # gap-naming + official-source-pointer system instruction).
-PARTIAL_ANSWER_MIN_SCORE = 0.30
+PARTIAL_ANSWER_MIN_SCORE = 0.05
 
 ALLOWED_SCOPES = {"study_abroad", "education", "scholarship", "visa_info", "documents"}
 
