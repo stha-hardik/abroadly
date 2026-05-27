@@ -20,6 +20,7 @@ from sqlalchemy.dialects.postgresql import JSONB as SAJsonb
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
+from app.eval import policies
 from app.eval.evaluator import default_evaluator
 from app.eval.types import Decision, EvalDecision
 from app.models.student import ChatTurnModel, ChatTurnOut, StudentModel
@@ -190,6 +191,19 @@ async def chat_endpoint(
     original_message = normalization.original
     query = normalization.normalized
     normalized_query_for_audit = query if normalization.was_changed else None
+
+    # Check profanity on the ORIGINAL message before normalization can sanitize it
+    from app.eval.scope_check import classify_scope
+    raw_scope = classify_scope(original_message)
+    if raw_scope == "profanity":
+        await _persist_turn(db, student_id=sid, role="user", content=original_message)
+        await db.commit()
+        return ChatResponse(
+            request_id=request_id, trace_id=trace_id,
+            decision=Decision.OUT_OF_SCOPE, confidence=0.0,
+            answer=policies.REFUSAL_TEMPLATES.get("profanity", policies.REFUSAL_TEMPLATES["default"]),
+            sources=[], reason="profanity",
+        )
 
     retrieved = await retrieve(query=query, student_id=req.student_id)
     retrieved = await rerank(query=query, retrieved=retrieved)
