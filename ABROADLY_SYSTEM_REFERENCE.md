@@ -8,8 +8,6 @@ Last updated: 2026-05-27
 
 Abroadly is a free, open-source AI study-abroad guidance app for Nepali and South Asian students.
 
-The product stance is important:
-
 - Help students understand admissions, documents, scholarships, visas, timelines, costs, and official next steps.
 - Prefer official sources: universities, embassies, government immigration portals, UCAS, Common App, IRCC, DHA, Education USA, DAAD, etc.
 - Do not frame Abroadly as a consultancy lead funnel.
@@ -21,8 +19,9 @@ The product stance is important:
 The live deployment is Docker/Caddy/GitHub Actions on Hostinger.
 
 - Live site: `https://abroadly.online`
+- Admin panel: `https://abroadly.online/admin/login`
 - VPS IP: `193.203.162.63`
-- VPS OS: Ubuntu 24.04
+- VPS OS: Ubuntu 24.04 with Docker
 - VPS project root: `/opt/abroadly`
 - Runtime: Docker Compose
 - Production compose file: `docker-compose.prod.yml`
@@ -30,8 +29,6 @@ The live deployment is Docker/Caddy/GitHub Actions on Hostinger.
 - TLS: Caddy-managed Let's Encrypt
 - Deploy trigger: push or merge to GitHub `main`
 - Deploy workflow: `.github/workflows/deploy.yml`
-
-The old systemd/nginx/paramiko setup is retired. Do not revive it unless Presish explicitly asks to replace Docker/Caddy.
 
 ## Live Container Stack
 
@@ -42,6 +39,12 @@ Production runs four containers:
 - `abroadly-backend-1`: FastAPI app on internal port `8000`
 - `abroadly-db-1`: Postgres 16
 
+Named Docker volumes:
+
+- `abroadly_pgdata`: Postgres data
+- `abroadly_chroma_data`: Chroma vector DB (persists knowledge base across restarts)
+- `abroadly_uploads`: Student uploaded documents
+
 Caddy routing:
 
 - `https://abroadly.online/` -> frontend
@@ -49,28 +52,15 @@ Caddy routing:
 - `https://abroadly.online/health` -> backend
 - `http://abroadly.online/*` -> HTTPS redirect
 
-Important implication: browser/frontend API calls must use `/api/...`, not raw backend paths.
-
-Examples:
-
-- Browser should call `/api/students`, not `/students`
-- Browser should call `/api/chat`, not `/chat`
-- Browser should call `/api/upload`, not `/upload`
-
-The backend itself still defines routes as `/students`, `/chat`, and `/upload`; Caddy maps public `/api/*` to those backend routes.
+Browser/frontend API calls must use `/api/...`, not raw backend paths.
 
 ## Deployment Flow
 
-Normal flow:
-
 ```text
 local code change
--> commit/push or API commit to main
--> GitHub Actions
--> SSH to Hostinger VPS
--> cd /opt/abroadly
--> git fetch origin main
--> git reset --hard origin/main
+-> commit/push to main
+-> GitHub Actions SSH to VPS
+-> cd /opt/abroadly && git pull origin main
 -> docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
 -> smoke-test https://abroadly.online/ and /api/health
 ```
@@ -81,144 +71,188 @@ Do not edit code directly on the VPS. The next deploy runs `git reset --hard ori
 
 Do not commit secrets to git.
 
-Production secrets belong in:
-
-```bash
-/opt/abroadly/.env
-```
-
-Key names the app expects:
+Production secrets belong in `/opt/abroadly/.env`:
 
 ```env
 DB_PASSWORD=strong-password
 GROQ_API_KEY=gsk_...
-GEMINI_API_KEY=...
-CORS_ORIGINS=https://abroadly.online,http://abroadly.online,https://www.abroadly.online
+GEMINI_API_KEY=AIza...
+CORS_ORIGINS=https://abroadly.online,http://abroadly.online
+ADMIN_USERNAME=username
+ADMIN_PASSWORD_HASH=<bcrypt hash>
+JWT_SECRET=<random string>
 ```
 
-Notes:
-
-- The Google key variable is `GEMINI_API_KEY`, not `GOOGLE_API_KEY`.
-- After changing `/opt/abroadly/.env`, recreate containers that need the new env:
-
-```bash
-cd /opt/abroadly
-docker compose -f docker-compose.prod.yml up -d --force-recreate backend
-```
-
-Current known limitation as of this reference:
-
-- The VPS did not have Groq or Gemini keys configured during the last check.
-- Without those keys, full generated AI replies are not enabled.
-- Chat can route requests and return clarifications, but rich answers need LLM keys plus a seeded knowledge base.
+Current state: Groq + Gemini keys are configured and working. Groq is primary LLM (llama-3.3-70b), Gemini 2.0 Flash is fallback when Groq hits rate limits.
 
 ## Frontend
 
 Path: `frontend/`
 
-Framework:
+Framework: Next.js 14 App Router, React 18, Tailwind CSS 4, Plus Jakarta Sans font.
 
-- Next.js App Router
-- React 18
-- Tailwind CSS
+### Pages
 
-Important files:
+| Path | File | Description |
+|------|------|-------------|
+| `/` | `page.tsx` | Landing page with hero, how-it-works, topics |
+| `/onboarding` | `onboarding/page.tsx` | Student profile creation form |
+| `/chat` | `chat/page.tsx` | AI chat with document upload panel |
+| `/admin/login` | `admin/login/page.tsx` | Admin login |
+| `/admin` | `admin/page.tsx` | Admin dashboard with stats |
+| `/admin/students` | `admin/students/page.tsx` | Student list with search, last message preview |
+| `/admin/students/[id]` | `admin/students/[id]/page.tsx` | Student detail: chat, documents, profile tabs |
 
-- `frontend/src/app/page.tsx`: landing page
-- `frontend/src/app/onboarding/page.tsx`: student profile flow
-- `frontend/src/app/chat/page.tsx`: chat UI
-- `frontend/src/app/globals.css`: visual system and global CSS
-- `frontend/src/lib/api.ts`: typed frontend API client
-- `frontend/Dockerfile`: production frontend image
-- `frontend/public/images/abroadly-hero.png`: current hero image
+### Key Frontend Files
 
-Recent frontend state:
+- `frontend/src/lib/api.ts`: typed student-facing API client (defaults to `/api`)
+- `frontend/src/lib/admin-api.ts`: admin API client with JWT auth
+- `frontend/src/app/globals.css`: visual system — chat bubbles, action chips, doc panel, animations
+- `frontend/Dockerfile`: production standalone Next.js image (copies `/public`)
 
-- UI was redesigned in a modern Hostinger-inspired SaaS style.
-- Landing, onboarding, and chat were updated.
-- `frontend/src/lib/api.ts` defaults to `/api` so browser calls hit Caddy/backend correctly.
-- `frontend/Dockerfile` copies `/public` into the standalone Next image. Keep that line, or public images will 404 in production.
+### Chat UI Features
 
-Frontend verification:
+- Premium chat bubble design with AI/User/Counselor avatars
+- Animated typing dots while AI thinks
+- **Action chips**: AI's "What to do next" suggestions rendered as clickable buttons
+  - Question suggestions auto-send as next message
+  - Upload suggestions open the document upload panel
+- **Document upload panel**: slide-out with 8 categorized doc types, drag-and-drop, image auto-compression, thumbnail preview, compression stats
+- **Counselor messages**: green "HC" avatar, distinct styling, loaded from chat history
+- `FormattedBody` component: renders bold text, bullet points, strips source references
+- Source chips cleaned: raw `.md` filenames stripped, human-readable labels
 
-```bash
-cd frontend
-npm run build
-```
+### Admin UI Features
 
-For visual checks, test both desktop and mobile. Important pages:
-
-- `/`
-- `/onboarding`
-- `/chat`
+- JWT auth stored in localStorage
+- Dashboard: 6 stat cards, top target countries bar chart, recent students
+- Student list: card layout, avatar initials, AI status badge, last message preview, doc count, search, auto-refresh 10s
+- Student detail: 3-tab layout
+  - **Chat tab**: full conversation, auto-refreshes every 5s, counselor reply input
+  - **Documents tab**: list uploaded files with download button
+  - **Profile tab**: full student detail with icons
+- AI toggle switch per student
 
 ## Backend
 
 Path: `backend/`
 
-Framework:
+Framework: FastAPI, SQLAlchemy async, Postgres, Chroma, Groq + Gemini.
 
-- FastAPI
-- SQLAlchemy async
-- Postgres
-- Chroma
-- Groq primary LLM, Gemini fallback
+### API Routes
 
-Important files:
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/students` | none | Create or upsert student (by email) |
+| `GET` | `/students/{id}` | none | Get student profile |
+| `PUT` | `/students/{id}` | none | Update student profile |
+| `POST` | `/chat` | none | AI chat (checks ai_paused flag) |
+| `GET` | `/chat/history/{student_id}` | none | Chat history for student |
+| `POST` | `/upload` | none | Upload document (PDF, TXT, JPG, PNG) |
+| `GET` | `/health` | none | Health check |
+| `POST` | `/admin/login` | none | Admin login, returns JWT |
+| `GET` | `/admin/stats` | JWT | Dashboard stats |
+| `GET` | `/admin/students` | JWT | Paginated student list with search |
+| `GET` | `/admin/students/{id}` | JWT | Student detail |
+| `GET` | `/admin/students/{id}/chat` | JWT | Full chat history |
+| `GET` | `/admin/students/{id}/documents` | JWT | List uploaded documents |
+| `GET` | `/admin/students/{id}/documents/{doc_id}/download` | JWT | Download a document |
+| `PUT` | `/admin/students/{id}/ai-toggle` | JWT | Pause/resume AI for student |
+| `POST` | `/admin/students/{id}/reply` | JWT | Send counselor reply |
 
-- `backend/app/main.py`: FastAPI app and router registration
-- `backend/app/api/onboarding.py`: `/students`
-- `backend/app/api/chat.py`: `/chat` and `/chat/history/{student_id}`
-- `backend/app/api/upload.py`: `/upload`
-- `backend/app/eval/`: refusal-first eval layer
-- `backend/app/rag/retriever.py`: Chroma vector retrieval plus local BM25 lexical fallback/ranking
-- `backend/app/rag/generator.py`: prompt assembly
-- `backend/app/rag/llm.py`: only place Groq/Gemini SDKs should be imported
-- `backend/app/prompts/system_prompt.md`: assistant system prompt
-- `backend/tests/test_eval.py`: eval tests
-- `backend/tests/test_retriever.py`: BM25 fallback and grounding tests
+### Key Backend Files
 
-Backend verification:
+- `backend/app/main.py`: FastAPI app, router registration
+- `backend/app/api/chat.py`: chat endpoint with ai_paused check, eval pipeline, audit persistence
+- `backend/app/api/onboarding.py`: student create/upsert (duplicate email returns existing)
+- `backend/app/api/upload.py`: document upload with OCR (tesseract for images), Chroma indexing
+- `backend/app/api/admin.py`: admin API with JWT auth
+- `backend/app/core/auth.py`: bcrypt password hashing, JWT create/decode, FastAPI dependency
+- `backend/app/core/config.py`: pydantic settings from `.env`
+- `backend/app/core/db.py`: Postgres engine, Chroma singleton, table creation + migrations
+- `backend/app/models/student.py`: ORM models (StudentModel with ai_paused, ChatTurnModel with counselor role)
+- `backend/app/eval/evaluator.py`: three-check eval layer (scope, escalation, confidence)
+- `backend/app/eval/scope_check.py`: keyword-based scope classification (greetings, Nepali, study-abroad terms)
+- `backend/app/eval/policies.py`: thresholds and refusal templates
+- `backend/app/rag/retriever.py`: Chroma vector search + BM25 lexical fallback
+- `backend/app/rag/reranker.py`: reranking retrieved chunks
+- `backend/app/rag/generator.py`: prompt assembly, source title cleaning, response cleanup
+- `backend/app/rag/llm.py`: Groq/Gemini provider with model fallback chain and error logging
+- `backend/app/prompts/system_prompt.md`: AI counselor personality and instructions
 
-```bash
-backend/venv/bin/python -m pytest backend/tests
+### Database Schema
+
+```sql
+students: id, full_name, email, phone, location, education_level, gpa,
+          target_countries (JSONB), preferred_field, goals, ai_paused (bool),
+          created_at, updated_at
+
+chat_turns: id, student_id (FK), role ('user'|'assistant'|'counselor'),
+            content, eval_decision, created_at
+
+chat_audit: id, request_id, trace_id, student_id, query, normalized_query,
+            chunk_ids (JSONB), retrieval_scores (JSONB), eval_decision,
+            eval_confidence, model_used, created_at
 ```
 
-Inside the production backend container:
-
-```bash
-cd /opt/abroadly
-docker compose -f docker-compose.prod.yml exec -T backend python -m pytest tests
-```
-
-## Chat Pipeline
-
-The chat path is intentionally refusal-first:
+### Chat Pipeline
 
 ```text
-normalize/query
--> retrieve from Chroma vector search + BM25 lexical fallback
+user message
+-> normalize (Gemini Flash: Nepali/Hinglish -> English)
+-> check ai_paused flag (if paused, return "counselor reviewing" message)
+-> retrieve from Chroma + BM25 fallback
 -> rerank
--> eval
--> generate only if allowed
--> persist audit and turns
+-> eval (scope check -> escalation check -> confidence check)
+-> generate (Groq llama-3.3-70b primary, llama-3.1-8b on rate limit, Gemini 2.0 Flash fallback)
+-> clean response (strip [Source:...], strip trailing Sources section)
+-> persist audit + chat turns
+-> return to student
 ```
 
-Key behavior:
+### AI Personality
 
-- Out-of-scope categories refuse before LLM generation.
-- High-stakes actions like filing visas, sending money, signing contracts, or paying tuition should point to official portals.
-- Low retrieval confidence should ask a clarifying question or produce a gap-honest partial answer if enough evidence exists.
-- The assistant should not invent requirements.
+The system prompt defines Abroadly as a warm dai/didi counselor:
 
-Recent backend fix:
+- Concise (3-6 sentences), no walls of text
+- Understands Nepali/Hinglish naturally
+- No source citations in response text (handled by frontend)
+- Every answer ends with 3 "What to do next" suggestions, one pushing document upload
+- Progressively collects student details (IELTS, GPA, budget, phone) through conversation
+- Never recommends consultancies
 
-- `scope_check.py` now recognizes common study-abroad terms like `documents`, `study in`, `UK`, `Australia`, `Canada`, `admissions`, `application`, `CAS`, `CoE`, and `student permit`.
-- `retriever.py` now uses `rank-bm25==0.2.2` as a small local lexical fallback/ranking signal, so exact terms like `CAS`, `CoE`, `IELTS`, and `GTE` can surface relevant Chroma chunks even when Gemini embedding search is unavailable or weak.
-- `confidence.py` now counts short study-abroad terms such as `UK`, `CAS`, and `CoE` during grounding checks.
-- A normal question like "What documents do I need to study in the UK?" should not be `out_of_scope`.
-- With no seeded knowledge, that question currently returns `low_confidence` clarification instead of a full answer.
-- `llm.py` now returns a graceful provider-configuration message if both Groq and Gemini keys are absent.
+### Eval Thresholds
+
+```python
+eval_min_retrieval_score = 0.35
+eval_min_grounding_score = 0.30
+eval_scope_strict = False          # unknown scope queries go through, not auto-rejected
+PARTIAL_ANSWER_MIN_SCORE = 0.05    # LLM always called for in-scope queries
+```
+
+### Knowledge Base
+
+- 194 chunks seeded from UK study-abroad corpus (visa, universities, scholarships, documents, FAQs)
+- Seed script: `backend/scripts/seed_knowledge.py`
+- Seed data: `backend/seed_data/` (UK corpus in `uk/` directory, 14 markdown files)
+- Embeddings: Gemini `gemini-embedding-001` model
+- Must reseed after Chroma volume is recreated: `docker exec abroadly-backend-1 python3 scripts/seed_knowledge.py`
+
+### Admin Authentication
+
+- Single admin user, credentials from environment variables
+- Default: username `username`, password `7654321a`
+- Password stored as bcrypt hash
+- JWT tokens (24h expiry) via PyJWT
+- All admin endpoints require `Authorization: Bearer <token>` header
+
+### Document Uploads
+
+- Stored on disk: `./uploads/{student_id}/{doc_id}.{ext}`
+- Supported formats: PDF, TXT, JPG, JPEG, PNG
+- Images: OCR via tesseract, auto-compressed client-side before upload (max 1600px, JPEG 70%)
+- Text extracted, chunked (300-word windows, 40-word overlap), embedded, indexed in Chroma
+- Admin can view and download uploaded documents per student
 
 ## API Smoke Tests
 
@@ -232,14 +266,7 @@ Create student:
 
 ```bash
 curl -sS -H 'Content-Type: application/json' \
-  -d '{
-    "full_name":"Test Student",
-    "email":"test@example.com",
-    "education_level":"plus_two",
-    "target_countries":["UK"],
-    "preferred_field":"Computer Science",
-    "goals":"Testing chat"
-  }' \
+  -d '{"full_name":"Test","email":"test@example.com","education_level":"plus_two","target_countries":["UK"]}' \
   https://abroadly.online/api/students
 ```
 
@@ -247,108 +274,71 @@ Chat:
 
 ```bash
 curl -sS -H 'Content-Type: application/json' \
-  -d '{
-    "student_id":"PASTE_STUDENT_ID",
-    "message":"What documents do I need to study in the UK?"
-  }' \
+  -d '{"student_id":"PASTE_ID","message":"hello"}' \
   https://abroadly.online/api/chat
 ```
 
-Expected current shape before keys and knowledge seeding:
+Expected: warm greeting, 3 next steps, decision `low_confidence` or `proceed`.
 
-- HTTP `200`
-- `decision` should be `low_confidence`, not `out_of_scope`
-- The response may ask for clarification or say generation is not configured
+Admin login:
 
-Expected future shape after keys and knowledge seeding:
+```bash
+curl -sS -H 'Content-Type: application/json' \
+  -d '{"username":"username","password":"7654321a"}' \
+  https://abroadly.online/api/admin/login
+```
 
-- HTTP `200`
-- useful answer
-- official-source guidance
-- sources when retrieved evidence exists
+Admin stats:
 
-## Known Prior Issues And Fixes
+```bash
+curl -sS -H 'Authorization: Bearer TOKEN' \
+  https://abroadly.online/api/admin/stats
+```
 
-Issue: browser showed a long Next.js 404 HTML response for `/students`.
+## Known Issues (Resolved)
 
-Cause:
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| "hello" rejected as out_of_scope | Strict scope mode, no greeting patterns | Added greeting/Nepali patterns, disabled strict mode |
+| AI never generates answers | Chroma had 0 docs, retrieval always scored 0 | Seeded 194 chunks, lowered thresholds |
+| Groq rate limit → fallback message shown | Both providers silently failed | Added model fallback chain, Gemini 2.0 Flash fallback, error logging |
+| .md filenames in AI responses | LLM context had raw filenames | Clean titles in generator, strip in response, clean on frontend |
+| Duplicate email crash on re-onboarding | INSERT without upsert logic | Changed to upsert (find existing by email, update) |
+| Deprecated google-generativeai SDK | FutureWarning, eventual breakage | Migrated to google-genai SDK |
+| Container name conflicts on deploy | Orphaned containers from failed deploys | `docker rm -f` cleanup before compose up |
 
-- Frontend called `/students`, which hit the Next app instead of the backend.
-
-Fix:
-
-- `frontend/src/lib/api.ts` defaults API base to `/api`.
-
-Issue: hero image worked locally but not live.
-
-Cause:
-
-- Next standalone Docker image did not copy `public/`.
-
-Fix:
-
-- `frontend/Dockerfile` copies `/app/public` into `/app/public`.
-
-Issue: backend crashed on startup due asyncpg multi-statement SQL.
-
-Cause:
-
-- `CREATE TABLE ...; CREATE INDEX ...;` was sent as one prepared statement.
-
-Fix:
-
-- `backend/app/core/db.py` splits the chat turns index creation into its own execute call.
-
-Issue: normal study-abroad question was falsely refused as out-of-scope.
-
-Cause:
-
-- Scope rules were too narrow and strict.
-
-Fix:
-
-- Expanded allow patterns and added tests.
-
-## Working Rules For Future Coding Prompts
+## Working Rules For Future Coding
 
 When Presish asks for frontend/UI work:
 
-- Inspect existing frontend files first.
-- Keep the current premium SaaS visual direction unless asked otherwise.
-- Run `npm run build`.
-- Check mobile and desktop render if possible.
+- Read existing files first. Keep the Plus Jakarta Sans / warm minimal design direction.
+- Test with `npm run build`. Check mobile and desktop.
 - Do not break `/api` routing.
+- Chat UI action chips parse from AI's "What to do next" section — keep that contract.
 
-When Presish asks for backend/replies/chat:
+When Presish asks for backend/AI:
 
-- Start with `backend/app/api/chat.py`, `backend/app/eval/`, `backend/app/rag/`, and `backend/app/prompts/system_prompt.md`.
-- Preserve refusal-first behavior.
-- Add or update tests in `backend/tests`.
-- Verify `/api/students` and `/api/chat` live after deploy.
-- Check whether `GROQ_API_KEY` and `GEMINI_API_KEY` are configured before assuming generation can work.
+- Start with `chat.py`, `eval/`, `rag/`, `prompts/system_prompt.md`.
+- Preserve refusal-first eval behavior.
+- Check Groq/Gemini keys are configured before assuming generation works.
+- After Chroma volume recreate, reseed knowledge base.
+
+When Presish asks for admin:
+
+- Admin pages under `frontend/src/app/admin/`.
+- Admin API under `backend/app/api/admin.py`.
+- Auth via `backend/app/core/auth.py` (JWT + bcrypt).
+- Default credentials: username/7654321a.
 
 When Presish asks for deploy/hosting:
 
-- Treat Docker/Caddy/GitHub Actions as canonical.
-- Check GitHub Actions and live health.
-- Be careful with `.github/workflows/deploy.yml`, `docker-compose.prod.yml`, `Caddyfile`, and Dockerfiles.
+- Docker/Caddy/GitHub Actions is canonical.
+- Production compose: `docker-compose.prod.yml`.
+- Clean orphaned containers before compose up to avoid conflicts.
 - Do not put secrets in git.
 
-When Presish asks for knowledge/research/replies:
+When Presish asks for knowledge/content:
 
-- Build official-source content.
-- Seed Chroma with structured, cited chunks.
-- Improve retrieval and prompt behavior only after retrieval data exists.
-- Prefer narrow, testable additions before large framework swaps. A LiteLLM provider layer is architecturally useful, but a March 2026 PyPI compromise means it should only be considered with pinned/locked dependencies and extra review.
-- The assistant should be helpful but gap-honest.
-
-## Immediate Backend Priorities
-
-1. Add `GROQ_API_KEY` and/or `GEMINI_API_KEY` to `/opt/abroadly/.env`.
-2. Recreate the backend container.
-3. Build real official-source seed content.
-4. Implement/upgrade `backend/scripts/seed_knowledge.py`.
-5. Verify generated replies with real student questions.
-6. Improve Nepali-English mixed question handling.
-7. Migrate embeddings from deprecated `google.generativeai` to the newer Google Gen AI SDK.
-8. Add tests for chat decisions, LLM fallback, and API route behavior.
+- Build official-source content in `backend/seed_data/`.
+- Seed with `docker exec abroadly-backend-1 python3 scripts/seed_knowledge.py`.
+- Currently only UK corpus exists. Australia, Canada, etc. need seed data.
