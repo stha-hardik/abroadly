@@ -1,11 +1,13 @@
 """Seed Chroma with global knowledge documents.
 
 Usage (from backend/ directory):
-    python scripts/seed_knowledge.py
+    python scripts/seed_knowledge.py              # reads from ./seed_data (default)
+    python scripts/seed_knowledge.py <dir>        # reads from <dir>
 
-Reads all .txt and .pdf files from settings.upload_dir.
+Reads all .txt and .pdf files from the given directory (defaults to ./seed_data
+under backend/, falls back to settings.upload_dir if seed_data doesn't exist).
 Chunks into ~400-token segments (~300 words) with 50-token overlap (~40 words).
-Embeds with Gemini and writes to Chroma.
+Embeds with Gemini and writes to Chroma with kind=global metadata.
 """
 from __future__ import annotations
 
@@ -91,16 +93,27 @@ def embed_batch(texts: list[str]) -> list[list[float]]:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-def seed() -> None:
-    upload_dir = Path(settings.upload_dir)
-    if not upload_dir.exists():
-        print(f"Upload dir not found: {upload_dir}")
+def _resolve_source_dir(override: Path | None) -> Path:
+    if override is not None:
+        return override
+    seed_dir = Path(__file__).parent.parent / "seed_data"
+    if seed_dir.exists():
+        return seed_dir
+    return Path(settings.upload_dir)
+
+
+def seed(source_dir: Path | None = None) -> None:
+    src = _resolve_source_dir(source_dir)
+    if not src.exists():
+        print(f"Source dir not found: {src}")
         sys.exit(1)
 
-    files = list(upload_dir.glob("*.txt")) + list(upload_dir.glob("*.pdf"))
+    files = list(src.glob("*.txt")) + list(src.glob("*.pdf"))
     if not files:
-        print(f"No .txt or .pdf files found in {upload_dir}")
+        print(f"No .txt or .pdf files found in {src}")
         sys.exit(0)
+
+    print(f"Reading seed files from: {src}")
 
     collection = get_chroma()
 
@@ -157,4 +170,5 @@ def seed() -> None:
 
 
 if __name__ == "__main__":
-    seed()
+    override = Path(sys.argv[1]) if len(sys.argv) > 1 else None
+    seed(override)
