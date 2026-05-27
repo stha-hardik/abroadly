@@ -8,6 +8,11 @@ _DENY_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("financial_advice", re.compile(r"\b(invest in|stock pick|crypto buy|trading strategy|portfolio allocation)\b", re.I)),
     ("political", re.compile(r"\b(election|political party|vote for|government policy debate)\b", re.I)),
     ("personal", re.compile(r"\b(my relationship|girlfriend|boyfriend|breakup|dating)\b", re.I)),
+    ("profanity", re.compile(
+        r"\b(muji|muj+i|randi|chikn[ae]|machikn[ae]|lado|puti|gand[eu]|bhalu|"
+        r"fuck\s*you|stfu|bitch|asshole|dick|cunt|motherfuck|nigga|nigger|retard)\b",
+        re.I,
+    )),
 ]
 
 _ALLOW_PATTERNS: list[tuple[str, re.Pattern]] = [

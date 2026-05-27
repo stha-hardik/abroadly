@@ -17,7 +17,7 @@ PARTIAL_ANSWER_MIN_SCORE = 0.05
 ALLOWED_SCOPES = {"study_abroad", "education", "scholarship", "visa_info", "documents"}
 
 # Categories that always refuse, regardless of retrieval score.
-DENY_SCOPES = {"medical", "legal", "financial_advice", "personal", "political"}
+DENY_SCOPES = {"medical", "legal", "financial_advice", "personal", "political", "profanity"}
 
 REFUSAL_TEMPLATES = {
     "medical": (
@@ -43,6 +43,11 @@ REFUSAL_TEMPLATES = {
     "political": (
         "I don't take positions on political topics. I can help you with the "
         "study-abroad process itself."
+    ),
+    "profanity": (
+        "Hey, let's keep it respectful. I'm here to help you with your "
+        "study-abroad journey. Ask me anything about universities, visas, "
+        "scholarships, or documents."
     ),
     "default": (
         "I'm not sure I can help with that one. I'm best at study-abroad "
