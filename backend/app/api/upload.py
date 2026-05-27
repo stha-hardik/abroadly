@@ -18,7 +18,7 @@ router = APIRouter()
 _EMBEDDING_MODEL = "models/gemini-embedding-001"
 _CHUNK_WORDS = 300
 _OVERLAP_WORDS = 40
-_ALLOWED_EXT = {".pdf", ".txt"}
+_ALLOWED_EXT = {".pdf", ".txt", ".jpg", ".jpeg", ".png"}
 
 
 class UploadResponse(BaseModel):
@@ -32,6 +32,17 @@ class UploadResponse(BaseModel):
 
 def _extract_text_txt(data: bytes) -> str:
     return data.decode("utf-8", errors="replace")
+
+
+def _extract_text_image(data: bytes) -> str:
+    try:
+        from PIL import Image
+        import pytesseract
+        img = Image.open(io.BytesIO(data))
+        text = pytesseract.image_to_string(img)
+        return text
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Image OCR error: {exc}") from exc
 
 
 def _extract_text_pdf(data: bytes) -> str:
@@ -109,6 +120,8 @@ async def upload(
     # Extract text
     if ext == ".txt":
         text = _extract_text_txt(data)
+    elif ext in (".jpg", ".jpeg", ".png"):
+        text = _extract_text_image(data)
     else:
         text = _extract_text_pdf(data)
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   chat,
@@ -28,25 +28,95 @@ interface UploadMessage {
   status: "uploading" | "done" | "error";
   filename: string;
   text: string;
+  docType?: string;
 }
 
 type Message = UserMessage | AiMessage | UploadMessage;
 
 const prompts = [
   {
-    icon: "🎓",
+    icon: "\u{1F393}",
     label: "UK applications",
     text: "What should a Nepali student check before applying to the UK?",
   },
   {
-    icon: "🏥",
+    icon: "\u{1F3E5}",
     label: "Compare countries",
     text: "How do I compare Australia and Canada for nursing?",
   },
   {
-    icon: "📄",
+    icon: "\u{1F4C4}",
     label: "Visa documents",
     text: "What documents should I prepare for a student visa?",
+  },
+];
+
+/* ── Document types for upload ────────────────────────────────────── */
+
+interface DocType {
+  id: string;
+  label: string;
+  icon: string;
+  desc: string;
+  accept: string;
+}
+
+const docTypes: DocType[] = [
+  {
+    id: "grade_sheet",
+    label: "Grade Sheet / Transcript",
+    icon: "\u{1F4CA}",
+    desc: "+2, A-levels, or bachelor's marksheet",
+    accept: ".pdf,.txt,.jpg,.jpeg,.png",
+  },
+  {
+    id: "citizenship",
+    label: "Citizenship",
+    icon: "\u{1F1F3}\u{1F1F5}",
+    desc: "Nepali citizenship certificate",
+    accept: ".pdf,.jpg,.jpeg,.png",
+  },
+  {
+    id: "passport",
+    label: "Passport",
+    icon: "\u{1F6C2}",
+    desc: "Valid passport bio page",
+    accept: ".pdf,.jpg,.jpeg,.png",
+  },
+  {
+    id: "sop",
+    label: "Statement of Purpose",
+    icon: "\u{270D}\u{FE0F}",
+    desc: "SOP or personal statement draft",
+    accept: ".pdf,.txt",
+  },
+  {
+    id: "recommendation",
+    label: "Recommendation Letter",
+    icon: "\u{1F4E8}",
+    desc: "LOR from teacher or employer",
+    accept: ".pdf,.txt,.jpg,.jpeg,.png",
+  },
+  {
+    id: "financial",
+    label: "Financial Documents",
+    icon: "\u{1F3E6}",
+    desc: "Bank statement, sponsor letter, scholarship",
+    accept: ".pdf,.jpg,.jpeg,.png",
+  },
+  {
+    id: "ielts",
+    label: "IELTS / PTE / TOEFL",
+    icon: "\u{1F4DD}",
+    desc: "English proficiency test score",
+    accept: ".pdf,.jpg,.jpeg,.png",
+  },
+  {
+    id: "other",
+    label: "Other Document",
+    icon: "\u{1F4CE}",
+    desc: "Any other relevant document",
+    accept: ".pdf,.txt,.jpg,.jpeg,.png",
   },
 ];
 
@@ -84,6 +154,63 @@ function SparkleIcon() {
   return (
     <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor">
       <path d="M8 0a.5.5 0 0 1 .5.5v2.05A5.001 5.001 0 0 1 12.45 6.5H14.5a.5.5 0 0 1 0 1h-2.05A5.001 5.001 0 0 1 8.5 11.45V13.5a.5.5 0 0 1-1 0v-2.05A5.001 5.001 0 0 1 3.55 7.5H1.5a.5.5 0 0 1 0-1h2.05A5.001 5.001 0 0 1 7.5 2.55V.5A.5.5 0 0 1 8 0Zm0 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
+    </svg>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-[18px] w-[18px]" fill="none">
+      <path
+        d="M2.5 5.5a2 2 0 0 1 2-2h3.17a2 2 0 0 1 1.42.59l.82.82a2 2 0 0 0 1.42.59h4.17a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-8Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none">
+      <path
+        d="M5 5l10 10M15 5l-10 10"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none">
+      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M6.5 10l2.5 2.5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function UploadCloudIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none">
+      <path
+        d="M12 16V8m0 0-3 3m3-3 3 3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -202,6 +329,197 @@ function AiResponseBubble({ response }: { response: ChatResponse }) {
   );
 }
 
+/* ── Document upload panel ────────────────────────────────────────── */
+
+interface UploadedDoc {
+  docTypeId: string;
+  filename: string;
+}
+
+function DocumentPanel({
+  open,
+  onClose,
+  studentId,
+  onUploadDone,
+}: {
+  open: boolean;
+  onClose: () => void;
+  studentId: string;
+  onUploadDone: (docType: DocType, filename: string) => void;
+}) {
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploaded, setUploaded] = useState<UploadedDoc[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const handleFile = useCallback(
+    async (docType: DocType, file: File) => {
+      setError(null);
+      setUploadingId(docType.id);
+      try {
+        await uploadFile(studentId, file);
+        setUploaded((prev) => [
+          ...prev.filter((d) => d.docTypeId !== docType.id),
+          { docTypeId: docType.id, filename: file.name },
+        ]);
+        onUploadDone(docType, file.name);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Upload failed";
+        setError(`${docType.label}: ${msg}`);
+      } finally {
+        setUploadingId(null);
+      }
+    },
+    [studentId, onUploadDone]
+  );
+
+  const handleDrop = useCallback(
+    (docType: DocType, e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(null);
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(docType, file);
+    },
+    [handleFile]
+  );
+
+  if (!open) return null;
+
+  return (
+    <>
+      <div className="doc-panel-overlay" onClick={onClose} />
+      <div className="doc-panel">
+        <div className="doc-panel-header">
+          <div>
+            <h2 className="text-[16px] font-bold text-[var(--ab-ink)]">
+              Upload Documents
+            </h2>
+            <p className="text-[12px] text-gray-400 mt-0.5">
+              Upload your study abroad documents for AI-powered analysis
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ab-focus flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mx-5 mb-3 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-[12px] text-red-600 font-medium">
+            {error}
+          </div>
+        )}
+
+        <div className="doc-panel-body">
+          <div className="space-y-2">
+            {docTypes.map((dt) => {
+              const isUploading = uploadingId === dt.id;
+              const uploadedDoc = uploaded.find((d) => d.docTypeId === dt.id);
+              const isDragTarget = dragOver === dt.id;
+
+              return (
+                <div
+                  key={dt.id}
+                  className={`doc-card ${isDragTarget ? "doc-card-drag" : ""} ${uploadedDoc ? "doc-card-done" : ""}`}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(dt.id); }}
+                  onDragLeave={() => setDragOver(null)}
+                  onDrop={(e) => handleDrop(dt, e)}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className="text-xl leading-none shrink-0">{dt.icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-[var(--ab-ink)] truncate">
+                        {dt.label}
+                      </p>
+                      <p className="text-[11px] text-gray-400 truncate">
+                        {uploadedDoc ? uploadedDoc.filename : dt.desc}
+                      </p>
+                    </div>
+                  </div>
+
+                  {uploadedDoc ? (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-emerald-500">
+                        <CheckCircleIcon />
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => fileRefs.current[dt.id]?.click()}
+                        className="text-[11px] font-semibold text-gray-400 hover:text-[var(--ab-plum)] transition-colors"
+                      >
+                        Replace
+                      </button>
+                    </div>
+                  ) : isUploading ? (
+                    <div className="shrink-0">
+                      <div className="h-5 w-5 rounded-full border-2 border-[var(--ab-plum)] border-t-transparent animate-spin" />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => fileRefs.current[dt.id]?.click()}
+                      className="doc-upload-btn shrink-0"
+                    >
+                      Upload
+                    </button>
+                  )}
+
+                  <input
+                    ref={(el) => { fileRefs.current[dt.id] = el; }}
+                    type="file"
+                    accept={dt.accept}
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFile(dt, file);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="doc-drop-zone">
+            <UploadCloudIcon />
+            <p className="mt-2 text-[12px] font-semibold text-gray-400">
+              Drag & drop any document here
+            </p>
+            <p className="text-[10px] text-gray-300 mt-1">
+              PDF, TXT, JPG, PNG supported
+            </p>
+          </div>
+        </div>
+
+        <div className="doc-panel-footer">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-gray-400">
+              {uploaded.length} of {docTypes.length} uploaded
+            </span>
+            <div className="h-1.5 w-20 rounded-full bg-gray-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-emerald-400 transition-all duration-500"
+                style={{ width: `${(uploaded.length / docTypes.length) * 100}%` }}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ab-focus rounded-lg bg-[var(--ab-ink)] px-5 py-2.5 text-[12px] font-bold text-white hover:bg-[var(--ab-ink-2)] transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── Main page ────────────────────────────────────────────────────── */
 
 export default function ChatPage() {
@@ -211,6 +529,8 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [docPanelOpen, setDocPanelOpen] = useState(false);
+  const [uploadedCount, setUploadedCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -331,6 +651,23 @@ export default function ChatPage() {
     }
   }
 
+  const handleDocUploadDone = useCallback(
+    (docType: DocType, filename: string) => {
+      setUploadedCount((c) => c + 1);
+      setMessages((m) => [
+        ...m,
+        {
+          role: "upload",
+          status: "done" as const,
+          filename,
+          text: `Uploaded ${docType.label}: ${filename}`,
+          docType: docType.id,
+        },
+      ]);
+    },
+    []
+  );
+
   const hasMessages = messages.length > 0;
 
   return (
@@ -347,7 +684,29 @@ export default function ChatPage() {
           </div>
         </Link>
 
-        <div className="mt-7 space-y-1.5">
+        {/* Documents button */}
+        <button
+          type="button"
+          onClick={() => setDocPanelOpen(true)}
+          className="ab-focus mt-6 flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left transition hover:border-[var(--ab-mint)]/30 hover:bg-white/[0.06]"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06]">
+            <FolderIcon />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-semibold text-white/80">My Documents</p>
+            <p className="text-[10px] text-white/35">
+              {uploadedCount > 0 ? `${uploadedCount} uploaded` : "Upload transcripts, passport..."}
+            </p>
+          </div>
+          {uploadedCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500/20 px-1.5 text-[10px] font-bold text-emerald-400">
+              {uploadedCount}
+            </span>
+          )}
+        </button>
+
+        <div className="mt-5 space-y-1.5">
           <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-white/30">
             Try asking
           </p>
@@ -399,16 +758,31 @@ export default function ChatPage() {
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              localStorage.removeItem("abroadly_student_id");
-              router.push("/onboarding");
-            }}
-            className="ab-focus chat-header-btn"
-          >
-            New session
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDocPanelOpen(true)}
+              className="ab-focus chat-header-btn flex items-center gap-1.5 lg:hidden"
+            >
+              <FolderIcon />
+              <span>Docs</span>
+              {uploadedCount > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-100 px-1 text-[9px] font-bold text-emerald-700">
+                  {uploadedCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem("abroadly_student_id");
+                router.push("/onboarding");
+              }}
+              className="ab-focus chat-header-btn"
+            >
+              New session
+            </button>
+          </div>
         </header>
 
         {/* Messages */}
@@ -427,6 +801,26 @@ export default function ChatPage() {
                   Ask about countries, documents, costs, timelines, scholarships —
                   anything study-abroad related.
                 </p>
+
+                {/* Upload CTA in empty state */}
+                <button
+                  type="button"
+                  onClick={() => setDocPanelOpen(true)}
+                  className="ab-focus mt-5 flex items-center gap-3 rounded-2xl border border-dashed border-gray-200 bg-white px-5 py-4 transition hover:border-[var(--ab-plum)]/40 hover:shadow-sm"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-[var(--ab-plum)]">
+                    <FolderIcon />
+                  </span>
+                  <div className="text-left">
+                    <p className="text-[13px] font-semibold text-[var(--ab-ink)]">
+                      Upload your documents
+                    </p>
+                    <p className="text-[11px] text-gray-400">
+                      Grade sheets, passport, IELTS score, SOP, and more
+                    </p>
+                  </div>
+                </button>
+
                 <div className="mt-6 grid gap-2 sm:grid-cols-3 w-full max-w-xl">
                   {prompts.map((p) => (
                     <button
@@ -472,7 +866,7 @@ export default function ChatPage() {
                     <div key={i} className="chat-row chat-row-ai" style={{ animationDelay: "0.05s" }}>
                       <AiAvatar />
                       <div className={`chat-upload-pill ${colorClass}`}>
-                        <PaperclipIcon />
+                        {msg.status === "done" ? <CheckCircleIcon /> : <PaperclipIcon />}
                         <span>{msg.text}</span>
                       </div>
                     </div>
@@ -519,11 +913,20 @@ export default function ChatPage() {
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
-                  title="Upload PDF or TXT"
-                  aria-label="Upload PDF or TXT"
+                  title="Quick upload"
+                  aria-label="Quick upload"
                   className="ab-focus chat-action-btn"
                 >
                   <PaperclipIcon />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDocPanelOpen(true)}
+                  title="Upload documents"
+                  aria-label="Upload documents"
+                  className="ab-focus chat-action-btn"
+                >
+                  <FolderIcon />
                 </button>
                 <div className="flex-1" />
                 <span className="text-[10px] text-gray-300 font-medium hidden sm:block">
@@ -554,6 +957,14 @@ export default function ChatPage() {
           </div>
         </footer>
       </section>
+
+      {/* ── Document upload panel ─────────────────────────────────── */}
+      <DocumentPanel
+        open={docPanelOpen}
+        onClose={() => setDocPanelOpen(false)}
+        studentId={studentId}
+        onUploadDone={handleDocUploadDone}
+      />
     </main>
   );
 }

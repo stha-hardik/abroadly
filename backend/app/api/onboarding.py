@@ -29,7 +29,20 @@ async def create_student(
     payload: StudentCreate,
     db: AsyncSession = Depends(get_session),
 ) -> StudentOut:
-    """Create a new student profile. Returns the created record with id."""
+    """Create a new student profile, or return existing one if email matches."""
+    result = await db.execute(
+        select(StudentModel).where(StudentModel.email == payload.email)
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        for field, value in payload.model_dump(exclude={"email"}).items():
+            if value is not None:
+                setattr(existing, field, value)
+        existing.updated_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(existing)
+        return _to_out(existing)
+
     student = StudentModel(
         id=uuid.uuid4(),
         created_at=datetime.utcnow(),
