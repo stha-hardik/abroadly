@@ -27,6 +27,15 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       APP_ENV: production
+    volumes:
+      # Persist Chroma + uploads across container recreates. Without these,
+      # every `docker compose up --build` wipes the seeded knowledge base
+      # (and any per-student uploaded docs) because the new container fs
+      # starts empty. Defaults from app.core.config — chroma_dir=./chroma_db,
+      # upload_dir=./uploads — resolve to /app/chroma_db and /app/uploads
+      # inside the container (workdir is /app per backend/Dockerfile).
+      - chroma_data:/app/chroma_db
+      - uploads_data:/app/uploads
 
   frontend:
     image: abroadly-frontend:local
@@ -57,5 +66,7 @@ services:
 
 volumes:
   pgdata:
+  chroma_data:
+  uploads_data:
   caddy_data:
   caddy_config:
