@@ -1,45 +1,57 @@
 # Abroadly
 
-AI-powered student intake layer between Nepali students and study-abroad consultancies.
+AI-powered intake layer between Nepali students and study-abroad consultancies.
 
-Free AI guidance (country fit, scholarships, document help) -> qualified students routed to partner consultancies. Revenue is referral/commission.
+Free AI guidance (country fit, scholarships, document help) — qualified students get routed to partner consultancies. Revenue is referral commission.
+
+**Live:** http://abroadly.online
 
 ## Status
 
-Phase 0: scaffold. Not yet deployed. Not on GitHub.
+Phase 4 — deployed to a Hostinger VPS, end-to-end flow working. Next up: seed the knowledge base, harden infra (SSL, systemd-only deploys), then Phase 5 (Nepali normalization) and Phase 6 (consultancy matching engine + referral logging).
 
 ## Stack
 
-- Backend: Python 3.11+, FastAPI, Postgres, ChromaDB, Groq (primary) + Gemini (fallback)
-- Frontend: Next.js (App Router), TypeScript
-- Deploy target: Hostinger VPS
+- **Backend:** Python 3.11, FastAPI (async), SQLAlchemy + asyncpg, ChromaDB
+- **LLMs:** Groq llama-3.3-70b primary, Gemini 1.5 flash fallback, Gemini embeddings
+- **Frontend:** Next.js 14 (App Router), React 18, TypeScript, Tailwind 4
+- **Infra:** Hostinger VPS (AlmaLinux 9), Plesk + nginx, Postgres 16, systemd
+
+## Read first
+
+- `docs/(C) ARCHITECTURE.md` — system shape and data flows
+- `docs/(C) EVAL-LAYER-SPEC.md` — the refusal-first eval layer (the killer feature)
+- `docs/(C) ROADMAP.md` — phased build plan
+- `infra/DEPLOY.md` — VPS deployment guide
+- `PROMPT_FOR_CLAUDE_MAX.md` — briefing for AI collaborators continuing the build
 
 ## Roles
 
-- Hardik: backend architecture (`backend/`, `docs/`, `infra/`)
-- Precious: UI/UX + business comms (`frontend/`, partner outreach)
+- **Hardik** — backend architecture (`backend/`, `docs/`, `infra/`)
+- **Precious** — UI/UX + business comms (`frontend/`, partner outreach)
 
-## Run (once deps are installed)
+## Local dev
 
-Backend:
-```
+**Backend:**
+```bash
 cd backend
-python -m venv .venv && .venv/Scripts/activate
+python3.11 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-cp ../.env.example .env  # fill in keys
+cp ../.env.example .env  # then fill in keys
 uvicorn app.main:app --reload
 ```
-Docs: http://localhost:8000/docs
+Docs at http://localhost:8000/docs
 
-Frontend:
-```
+**Frontend:**
+```bash
 cd frontend
+cp .env.local.example .env.local  # then set NEXT_PUBLIC_API_URL
 npm install
 npm run dev
 ```
+App at http://localhost:3000
 
-## Read next
+## Deploy
 
-- `docs/(C) ROADMAP.md` — phased build plan
-- `docs/(C) ARCHITECTURE.md` — system shape
-- `docs/(C) EVAL-LAYER-SPEC.md` — the killer feature
+See `infra/DEPLOY.md`. After first-time setup, every deploy is `./deploy.sh` on the VPS.

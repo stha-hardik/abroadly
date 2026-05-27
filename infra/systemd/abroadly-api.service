@@ -1,0 +1,20 @@
+[Unit]
+Description=Abroadly API (FastAPI / uvicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/vhosts/abroadly.online/httpdocs/abroadly/backend
+EnvironmentFile=/var/www/vhosts/abroadly.online/httpdocs/abroadly/backend/.env
+ExecStart=/var/www/vhosts/abroadly.online/httpdocs/abroadly/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/abroadly-api.log
+StandardError=append:/var/log/abroadly-api.log
+
+# TODO: run as a dedicated non-root user once Plesk vhost ownership is sorted.
+
+[Install]
+WantedBy=multi-user.target
