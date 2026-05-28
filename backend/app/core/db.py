@@ -108,6 +108,9 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS expected_gpa FLOAT;
 
 _ADD_PROFILE_COMPLETED = """
 ALTER TABLE students ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT FALSE;
+"""
+
+_BACKFILL_PROFILE_COMPLETED = """
 UPDATE students
 SET profile_completed = TRUE
 WHERE profile_completed IS NOT TRUE
@@ -120,6 +123,9 @@ WHERE profile_completed IS NOT TRUE
     OR goals IS NOT NULL
     OR jsonb_array_length(COALESCE(target_countries, '[]'::jsonb)) > 0
   );
+"""
+
+_SET_PROFILE_COMPLETED_DEFAULT = """
 ALTER TABLE students ALTER COLUMN profile_completed SET DEFAULT TRUE;
 """
 
@@ -144,4 +150,6 @@ async def create_tables() -> None:
         await conn.execute(text(_ADD_AI_PAUSED))
         await conn.execute(text(_ADD_EXPECTED_GPA))
         await conn.execute(text(_ADD_PROFILE_COMPLETED))
+        await conn.execute(text(_BACKFILL_PROFILE_COMPLETED))
+        await conn.execute(text(_SET_PROFILE_COMPLETED_DEFAULT))
         await conn.execute(text(_FIX_ROLE_CONSTRAINT))
