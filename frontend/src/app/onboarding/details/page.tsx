@@ -189,14 +189,14 @@ export default function ProfileDetailsPage() {
   }
 
   const inputClass =
-    "w-full rounded-md border border-[#d6dde9] bg-white px-4 py-3 text-sm font-bold text-[#172033] placeholder:text-[#8a95a8] focus:border-[#2854b8] focus:outline-none focus:ring-4 focus:ring-[#2854b8]/12";
+    "w-full rounded-md border border-[#E8E5DD] bg-white px-4 py-3 text-sm font-bold text-[#1B1916] placeholder:text-[#A8A29A] focus:border-[#365CC4] focus:outline-none focus:ring-4 focus:ring-[#365CC4]/12";
   const labelClass = "mb-2 block text-sm font-black text-[#24314a]";
   const errorClass = "mt-2 text-xs font-bold text-[#b42318]";
 
   if (loadState === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f6f8fb] px-5 text-[#172033]">
-        <section className="w-full max-w-md rounded-lg border border-[#d7dfea] bg-white p-7 text-center shadow-sm">
+      <main className="flex min-h-screen items-center justify-center bg-[#FAF9F6] px-5 text-[#1B1916]">
+        <section className="w-full max-w-md rounded-lg border border-[#E8E5DD] bg-white p-7 text-center shadow-sm">
           <div className="mx-auto h-11 w-11 animate-pulse rounded-md bg-[#dce7f8]" />
           <h1 className="mt-5 text-2xl font-black">Checking your Google session</h1>
           <p className="mt-3 text-sm font-semibold text-[#647086]">
@@ -209,8 +209,8 @@ export default function ProfileDetailsPage() {
 
   if (loadState === "signed_out") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f6f8fb] px-5 text-[#172033]">
-        <section className="w-full max-w-md rounded-lg border border-[#d7dfea] bg-white p-7 shadow-sm">
+      <main className="flex min-h-screen items-center justify-center bg-[#FAF9F6] px-5 text-[#1B1916]">
+        <section className="w-full max-w-md rounded-lg border border-[#E8E5DD] bg-white p-7 shadow-sm">
           <Link href="/" className="ab-focus flex items-center gap-3 rounded-md">
             <img
               src="/images/abroadly-logo.png"
@@ -234,8 +234,8 @@ export default function ProfileDetailsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f8fb] text-[#172033]">
-      <header className="border-b border-[#dfe5ef] bg-white/90 backdrop-blur">
+    <main className="min-h-screen bg-[#FAF9F6] text-[#1B1916]">
+      <header className="border-b border-[#E8E5DD] bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
           <Link href="/" className="ab-focus flex items-center gap-3 rounded-md">
             <img
@@ -245,7 +245,7 @@ export default function ProfileDetailsPage() {
             />
             <span className="text-lg font-black">Abroadly</span>
           </Link>
-          <span className="rounded-md border border-[#dce3ef] bg-[#f8fafc] px-3 py-2 text-xs font-black text-[#546176]">
+          <span className="rounded-md border border-[#dce3ef] bg-[#F4F2EC] px-3 py-2 text-xs font-black text-[#546176]">
             Verified Google email
           </span>
         </div>
@@ -254,7 +254,7 @@ export default function ProfileDetailsPage() {
       <section className="mx-auto grid max-w-7xl gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[0.72fr_1.28fr] lg:py-12">
         <aside className="lg:sticky lg:top-8">
           <div className="rounded-lg bg-[#12244a] p-6 text-white shadow-[0_24px_70px_rgba(18,36,74,0.22)]">
-            <p className="text-xs font-black uppercase text-[#8fe6c4]">
+            <p className="text-xs font-black uppercase text-[#7DDBB1]">
               One-time student profile
             </p>
             <h1 className="mt-3 text-3xl font-black leading-tight">
@@ -272,7 +272,7 @@ export default function ProfileDetailsPage() {
               </div>
               <div className="mt-2 h-2 rounded-full bg-white/14">
                 <div
-                  className="h-2 rounded-full bg-[#8fe6c4] transition-all"
+                  className="h-2 rounded-full bg-[#7DDBB1] transition-all"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -294,16 +294,16 @@ export default function ProfileDetailsPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-lg border border-[#d7dfea] bg-white p-5 shadow-sm sm:p-7"
+          className="rounded-lg border border-[#E8E5DD] bg-white p-5 shadow-sm sm:p-7"
         >
-          <div className="flex flex-col gap-4 border-b border-[#e4e8f0] pb-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-4 border-b border-[#EFECE4] pb-6 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase text-[#2854b8]">
+              <p className="text-xs font-black uppercase text-[#365CC4]">
                 Profile details
               </p>
               <h2 className="mt-2 text-2xl font-black">Tell us where you are heading.</h2>
             </div>
-            <div className="rounded-md bg-[#edf8f2] px-3 py-2 text-xs font-black text-[#087a4d]">
+            <div className="rounded-md bg-[#E8F2EC] px-3 py-2 text-xs font-black text-[#0A6E45]">
               Asked once
             </div>
           </div>
@@ -423,7 +423,7 @@ export default function ProfileDetailsPage() {
                 <label className="block text-sm font-black text-[#24314a]">
                   Interested countries
                 </label>
-                <span className="text-xs font-bold text-[#7a8495]">
+                <span className="text-xs font-bold text-[#8A847B]">
                   {form.target_countries.length} selected
                 </span>
               </div>
@@ -435,7 +435,7 @@ export default function ProfileDetailsPage() {
                       key={country}
                       className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm font-black transition ${
                         checked
-                          ? "border-[#2854b8] bg-[#eef4ff] text-[#172033]"
+                          ? "border-[#365CC4] bg-[#EEF1FA] text-[#1B1916]"
                           : "border-[#dce3ef] bg-white text-[#48556a] hover:border-[#aab8cf]"
                       }`}
                     >
@@ -443,7 +443,7 @@ export default function ProfileDetailsPage() {
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleCountry(country)}
-                        className="h-4 w-4 rounded border-[#b7c2d4] text-[#2854b8] focus:ring-[#2854b8]"
+                        className="h-4 w-4 rounded border-[#b7c2d4] text-[#365CC4] focus:ring-[#365CC4]"
                       />
                       <span>{country}</span>
                     </label>
@@ -468,7 +468,7 @@ export default function ProfileDetailsPage() {
                 onChange={(e) => setField("goals", e.target.value)}
                 placeholder="Example: I want to study Nursing in Australia and understand the safest next steps for documents, budget, and visa planning."
               />
-              <div className="mt-2 flex items-center justify-between text-xs font-bold text-[#7a8495]">
+              <div className="mt-2 flex items-center justify-between text-xs font-bold text-[#8A847B]">
                 <span>Optional, but useful for better replies.</span>
                 <span>{form.goals.length}/1200</span>
               </div>
@@ -481,17 +481,17 @@ export default function ProfileDetailsPage() {
             </div>
           )}
 
-          <div className="mt-7 flex flex-col-reverse gap-3 border-t border-[#e4e8f0] pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-7 flex flex-col-reverse gap-3 border-t border-[#EFECE4] pt-6 sm:flex-row sm:items-center sm:justify-between">
             <Link
               href="/onboarding"
-              className="ab-focus rounded-md border border-[#d6dde9] bg-white px-5 py-3 text-center text-sm font-black text-[#344158] transition hover:border-[#2854b8]"
+              className="ab-focus rounded-md border border-[#E8E5DD] bg-white px-5 py-3 text-center text-sm font-black text-[#344158] transition hover:border-[#365CC4]"
             >
               Back
             </Link>
             <button
               type="submit"
               disabled={submitting}
-              className="ab-focus rounded-md bg-[#12244a] px-6 py-3 text-sm font-black text-white shadow-[0_14px_32px_rgba(18,36,74,0.2)] transition hover:-translate-y-0.5 hover:bg-[#1d376c] disabled:cursor-not-allowed disabled:bg-[#8a95a8]"
+              className="ab-focus rounded-md bg-[#12244a] px-6 py-3 text-sm font-black text-white shadow-[0_14px_32px_rgba(18,36,74,0.2)] transition hover:-translate-y-0.5 hover:bg-[#1F3D78] disabled:cursor-not-allowed disabled:bg-[#A8A29A]"
             >
               {submitting ? "Saving profile" : "Save profile and open chat"}
             </button>

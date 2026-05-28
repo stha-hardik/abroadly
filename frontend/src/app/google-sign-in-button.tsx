@@ -38,15 +38,15 @@ export function GoogleSignInButton({
 }: GoogleSignInButtonProps) {
   const base =
     variant === "outline"
-      ? "border border-[#d8deea] bg-white text-[#172033] shadow-sm hover:border-[#2854b8] hover:bg-[#f8fbff]"
-      : "border border-white/20 bg-white text-[#172033] shadow-[0_18px_42px_rgba(13,28,54,0.18)] hover:bg-[#f8fbff]";
+      ? "border border-[#E8E5DD] bg-white text-[#1B1916] shadow-sm hover:border-[#365CC4] hover:bg-[#F4F2EC]"
+      : "border border-white/20 bg-white text-[#1B1916] shadow-[0_4px_12px_rgba(15,15,15,0.06),0_1px_3px_rgba(15,15,15,0.04)] hover:bg-[#F4F2EC]";
 
   return (
     <a
       href={googleLoginUrl()}
       className={`ab-focus inline-flex items-center justify-center gap-3 rounded-md px-5 py-3 text-sm font-black transition hover:-translate-y-0.5 ${base} ${className}`}
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[#e4e8f0] bg-white">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[#EFECE4] bg-white">
         <GoogleMark />
       </span>
       <span className="flex min-w-0 flex-col items-start leading-tight">
