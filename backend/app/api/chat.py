@@ -19,6 +19,7 @@ from sqlalchemy import bindparam, select, text
 from sqlalchemy.dialects.postgresql import JSONB as SAJsonb
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.db import get_session
 from app.eval import policies
 from app.eval.evaluator import default_evaluator
@@ -173,7 +174,7 @@ async def chat_endpoint(
         "goals": student_model.goals,
     }
 
-    if student_model.ai_paused:
+    if settings.ai_globally_paused or student_model.ai_paused:
         await _persist_turn(db, student_id=sid, role="user", content=req.message)
         await db.commit()
         return ChatResponse(

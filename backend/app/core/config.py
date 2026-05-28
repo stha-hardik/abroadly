@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     admin_password_hash: str = ""
     jwt_secret: str = "abroadly-jwt-secret-change-in-prod"
 
+    # Global AI toggle (runtime, not persisted across restarts)
+    ai_globally_paused: bool = False
+
     # Uploads
     upload_dir: str = "./uploads"
     max_upload_mb: int = 15

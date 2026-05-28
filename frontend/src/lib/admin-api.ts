@@ -135,6 +135,17 @@ export function getDocDownloadUrl(studentId: string, docId: string): string {
   return `${BASE}/students/${studentId}/documents/${docId}/download`;
 }
 
+export async function getGlobalAI(): Promise<{ paused: boolean }> {
+  return adminFetch("/ai-global");
+}
+
+export async function setGlobalAI(paused: boolean): Promise<void> {
+  await adminFetch("/ai-global", {
+    method: "PUT",
+    body: JSON.stringify({ paused }),
+  });
+}
+
 export async function toggleAI(id: string, paused: boolean): Promise<void> {
   await adminFetch(`/students/${id}/ai-toggle`, {
     method: "PUT",

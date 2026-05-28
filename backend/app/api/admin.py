@@ -175,6 +175,24 @@ async def admin_login(req: LoginRequest) -> LoginResponse:
     return LoginResponse(access_token=token)
 
 
+# ── Global AI toggle ──────────────────────────────────────────────────
+
+@router.get("/ai-global")
+async def admin_get_global_ai(
+    _admin: str = Depends(get_current_admin),
+) -> dict:
+    return {"paused": settings.ai_globally_paused}
+
+
+@router.put("/ai-global")
+async def admin_set_global_ai(
+    req: ToggleAIRequest,
+    _admin: str = Depends(get_current_admin),
+) -> dict:
+    settings.ai_globally_paused = req.paused
+    return {"paused": settings.ai_globally_paused}
+
+
 # ── Stats ─────────────────────────────────────────────────────────────
 
 @router.get("/stats", response_model=StatsResponse)

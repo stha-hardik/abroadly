@@ -2,14 +2,22 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getStats, type Stats } from "@/lib/admin-api";
+import { getStats, getGlobalAI, setGlobalAI, type Stats } from "@/lib/admin-api";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [aiPaused, setAiPaused] = useState(false);
 
   useEffect(() => {
     getStats().then(setStats).catch(() => {});
+    getGlobalAI().then((d) => setAiPaused(d.paused)).catch(() => {});
   }, []);
+
+  async function handleGlobalToggle() {
+    const next = !aiPaused;
+    setAiPaused(next);
+    try { await setGlobalAI(next); } catch { setAiPaused(!next); }
+  }
 
   if (!stats) return <div className="p-8 text-sm text-gray-400">Loading...</div>;
 
@@ -26,6 +34,31 @@ export default function AdminDashboard() {
     <div className="p-6 lg:p-8 max-w-6xl">
       <h1 className="text-2xl font-bold text-[var(--ab-ink)]">Dashboard</h1>
       <p className="text-sm text-gray-400 mt-1">Overview of Abroadly activity</p>
+
+      {/* Global AI toggle */}
+      <div className={`mt-6 flex items-center justify-between rounded-2xl border p-5 transition ${
+        aiPaused ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"
+      }`}>
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{aiPaused ? "\u{23F8}\u{FE0F}" : "\u{1F916}"}</span>
+          <div>
+            <p className="text-[14px] font-bold text-[var(--ab-ink)]">
+              Global AI Replies {aiPaused ? "Paused" : "Active"}
+            </p>
+            <p className="text-[12px] text-gray-500 mt-0.5">
+              {aiPaused
+                ? "AI is OFF for ALL students. Everyone sees 'a counselor is reviewing'."
+                : "AI is answering all students automatically. Toggle off to handle everyone manually."}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleGlobalToggle}
+          className={`relative h-8 w-14 shrink-0 rounded-full transition ${aiPaused ? "bg-gray-300" : "bg-emerald-500"}`}
+        >
+          <span className={`absolute top-0.5 h-7 w-7 rounded-full bg-white shadow transition-transform ${aiPaused ? "left-0.5" : "left-[26px]"}`} />
+        </button>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-6">
         {cards.map((c) => (
