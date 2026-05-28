@@ -3,18 +3,33 @@
 @plugin "@tailwindcss/forms";
 
 :root {
-  --ab-ink: #21143d;
-  --ab-ink-2: #37216a;
-  --ab-plum: #673de6;
-  --ab-mint: #00d6a3;
-  --ab-coral: #ff7a59;
-  --ab-sun: #ffd166;
-  --ab-paper: #fbfaf7;
-  --ab-line: #ded8ee;
-}
+  /* Inks — warm dark grey, Notion-adjacent */
+  --ab-ink: #1B1916;
+  --ab-ink-soft: #3F3A33;
 
-* {
-  letter-spacing: 0;
+  /* Muted — warm greys for body copy and labels */
+  --ab-muted: #6B655C;
+  --ab-muted-soft: #8A847B;
+
+  /* Surfaces — warm off-white instead of cool blue-grey */
+  --ab-paper: #FAF9F6;
+  --ab-paper-2: #F4F2EC;
+
+  /* Borders — almost invisible, warm tinted */
+  --ab-line: #E8E5DD;
+  --ab-line-soft: #EFECE4;
+
+  /* Brand — emerald deepened, mint slightly softened, navy preserved */
+  --ab-brand: #0A6E45;
+  --ab-brand-soft: #7DDBB1;
+  --ab-navy: #12244a;
+  --ab-navy-hover: #1F3D78;
+
+  /* Tiered neutral shadows — no navy tint, all 15-15-15 grey */
+  --shadow-xs: 0 1px 2px rgba(15, 15, 15, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 15, 15, 0.06), 0 1px 2px rgba(15, 15, 15, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 15, 15, 0.06), 0 1px 3px rgba(15, 15, 15, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 15, 15, 0.08), 0 2px 6px rgba(15, 15, 15, 0.04);
 }
 
 html {
@@ -23,31 +38,33 @@ html {
 
 body {
   min-height: 100%;
-  background:
-    linear-gradient(180deg, rgba(251, 250, 247, 0.96), rgba(245, 242, 252, 0.98)),
-    var(--ab-paper);
+  background: var(--ab-paper);
   color: var(--ab-ink);
   font-family: "Plus Jakarta Sans", "Aptos", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background: rgba(0, 214, 163, 0.35);
+  background: rgba(125, 219, 177, 0.32);
 }
+
+/* Utility shadow classes — apply via className for tiered card / button lifts */
+.ab-shadow-xs { box-shadow: var(--shadow-xs); }
+.ab-shadow-sm { box-shadow: var(--shadow-sm); }
+.ab-shadow-md { box-shadow: var(--shadow-md); }
+.ab-shadow-lg { box-shadow: var(--shadow-lg); }
+
+/* Legacy aliases — kept so existing class usages don't break, mapped to new scale */
+.ab-soft-shadow { box-shadow: var(--shadow-lg); }
+.ab-button-shadow { box-shadow: var(--shadow-md); }
 
 .ab-grid {
   background-image:
-    linear-gradient(rgba(103, 61, 230, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(103, 61, 230, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(27, 25, 22, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 25, 22, 0.05) 1px, transparent 1px);
   background-size: 36px 36px;
-}
-
-.ab-soft-shadow {
-  box-shadow: 0 22px 70px rgba(33, 20, 61, 0.14);
-}
-
-.ab-button-shadow {
-  box-shadow: 0 16px 34px rgba(103, 61, 230, 0.26);
 }
 
 .ab-focus {
@@ -55,8 +72,8 @@ body {
 }
 
 .ab-focus:focus-visible {
-  outline: 3px solid rgba(0, 214, 163, 0.5);
-  outline-offset: 3px;
+  outline: 2px solid rgba(125, 219, 177, 0.6);
+  outline-offset: 2px;
 }
 
 /* ── Chat layout ───────────────────────────────────────────────────── */

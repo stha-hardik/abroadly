@@ -19,7 +19,7 @@ const trustItems = [
 
 export default function OnboardingPage() {
   return (
-    <main className="min-h-screen bg-[#f6f8fb] text-[#172033]">
+    <main className="min-h-screen bg-[#FAF9F6] text-[#1B1916]">
       <div className="relative overflow-hidden">
         {/* Background layers — cover the FULL hero (not a fixed 360px band)
             so navy stays behind every line of headline copy and every trust
@@ -50,10 +50,10 @@ export default function OnboardingPage() {
 
         <section className="relative z-10 mx-auto grid max-w-7xl gap-8 px-5 pb-20 pt-10 sm:px-8 lg:grid-cols-[1fr_0.82fr] lg:items-start lg:pt-16">
           <div className="max-w-3xl pt-2 text-white">
-            <p className="text-sm font-black uppercase tracking-normal text-[#8fe6c4]">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#7DDBB1]">
               Secure student access
             </p>
-            <h1 className="mt-4 max-w-2xl text-4xl font-black leading-tight sm:text-5xl">
+            <h1 className="mt-4 max-w-2xl text-4xl font-bold leading-[1.05] tracking-[-0.025em] sm:text-5xl">
               Sign in with Google before Abroadly creates your student profile.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 sm:text-lg">
@@ -74,22 +74,22 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          <aside className="rounded-lg border border-[#d7dfea] bg-white p-5 shadow-[0_28px_80px_rgba(20,35,62,0.18)] sm:p-7">
+          <aside className="rounded-xl border border-[#E8E5DD] bg-white p-6 shadow-[0_12px_32px_rgba(15,15,15,0.08),0_2px_6px_rgba(15,15,15,0.04)] sm:p-8">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-black uppercase text-[#2854b8]">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#365CC4]">
                   Abroadly account
                 </p>
-                <h2 className="mt-2 text-2xl font-black leading-tight">
+                <h2 className="mt-2 text-2xl font-semibold leading-[1.15] tracking-[-0.015em]">
                   Continue with your verified Google email.
                 </h2>
               </div>
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#e9f7f1] text-sm font-black text-[#087a4d]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#E8F2EC] text-sm font-black text-[#0A6E45]">
                 ID
               </span>
             </div>
 
-            <div className="mt-7 rounded-md border border-[#dfe5ef] bg-[#f8fafc] p-4">
+            <div className="mt-7 rounded-md border border-[#E8E5DD] bg-[#F4F2EC] p-4">
               <GoogleSignInButton
                 variant="outline"
                 label="Continue with Google"
@@ -98,7 +98,7 @@ export default function OnboardingPage() {
               />
             </div>
 
-            <div className="mt-6 space-y-3 text-sm leading-6 text-[#596579]">
+            <div className="mt-6 space-y-3 text-sm leading-6 text-[#6B655C]">
               <p>
                 No password is created on Abroadly. Google confirms the email, and
                 Abroadly stores only the student profile details needed for guidance.
@@ -109,15 +109,15 @@ export default function OnboardingPage() {
               </p>
             </div>
 
-            <div className="mt-7 border-t border-[#e4e8f0] pt-5">
-              <p className="text-xs font-bold uppercase text-[#7a8495]">
+            <div className="mt-7 border-t border-[#EFECE4] pt-5">
+              <p className="text-xs font-bold uppercase text-[#8A847B]">
                 Next screen
               </p>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-bold text-[#172033]">
-                <span className="rounded-md bg-[#eef4ff] px-3 py-2">Academic details</span>
-                <span className="rounded-md bg-[#edf8f2] px-3 py-2">Target countries</span>
-                <span className="rounded-md bg-[#fff7e6] px-3 py-2">Study goals</span>
-                <span className="rounded-md bg-[#f3eefc] px-3 py-2">Saved once</span>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-bold text-[#1B1916]">
+                <span className="rounded-md bg-[#EEF1FA] px-3 py-2">Academic details</span>
+                <span className="rounded-md bg-[#E8F2EC] px-3 py-2">Target countries</span>
+                <span className="rounded-md bg-[#FBF4E6] px-3 py-2">Study goals</span>
+                <span className="rounded-md bg-[#F1ECF5] px-3 py-2">Saved once</span>
               </div>
             </div>
           </aside>
