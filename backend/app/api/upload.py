@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import io
-import os
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 import google.generativeai as genai
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.core.config import settings
@@ -19,11 +20,31 @@ _EMBEDDING_MODEL = "models/gemini-embedding-001"
 _CHUNK_WORDS = 300
 _OVERLAP_WORDS = 40
 _ALLOWED_EXT = {".pdf", ".txt", ".jpg", ".jpeg", ".png"}
+_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
+_MIME_TYPES = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".pdf": "application/pdf",
+    ".txt": "text/plain",
+}
+
+
+class StudentDocument(BaseModel):
+    filename: str
+    doc_id: str
+    doc_type: str
+    ext: str
+    is_image: bool
+    size_bytes: int
+    uploaded_at: str
 
 
 class UploadResponse(BaseModel):
     filename: str
     message: str
+    document: StudentDocument | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +142,50 @@ def _embed(text: str) -> list[float]:
 
 
 # ---------------------------------------------------------------------------
+# Stored document listing
+# ---------------------------------------------------------------------------
+
+def _document_item_from_file(path: Path) -> StudentDocument:
+    doc_id = path.stem
+    ext = path.suffix.lower()
+    title = path.name
+    doc_type = "other"
+
+    try:
+        collection = get_chroma()
+        results = collection.get(where={"doc_id": doc_id}, limit=1, include=["metadatas"])
+        metas = results.get("metadatas") if results else None
+        if metas and len(metas) > 0:
+            title = metas[0].get("title", path.name) or path.name
+            doc_type = metas[0].get("doc_type", "other") or "other"
+    except Exception:
+        pass
+
+    stat = path.stat()
+    return StudentDocument(
+        filename=title,
+        doc_id=doc_id,
+        doc_type=doc_type,
+        ext=ext,
+        is_image=ext in _IMAGE_EXTS,
+        size_bytes=stat.st_size,
+        uploaded_at=datetime.fromtimestamp(stat.st_mtime).isoformat(),
+    )
+
+
+def _list_student_documents(student_id: str) -> list[StudentDocument]:
+    doc_dir = Path(settings.upload_dir) / student_id
+    if not doc_dir.exists():
+        return []
+
+    return [
+        _document_item_from_file(path)
+        for path in sorted(doc_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+        if path.is_file()
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Endpoint
 # ---------------------------------------------------------------------------
 
@@ -129,6 +194,7 @@ async def upload(
     student_id: str = Form(...),
     file: UploadFile = File(...),
     doc_type: str = Form("other"),
+    display_filename: str | None = Form(None),
 ) -> UploadResponse:
     """Accept transcript / certificate / results doc. PDF or TXT.
 
@@ -141,8 +207,9 @@ async def upload(
       6. Upsert to Chroma with metadata {kind=student, student_id, source_type=student, title}
       7. Return filename + message
     """
-    filename = file.filename or "document"
-    ext = Path(filename).suffix.lower()
+    uploaded_filename = file.filename or "document"
+    filename = display_filename or uploaded_filename
+    ext = Path(uploaded_filename).suffix.lower()
     if ext not in _ALLOWED_EXT:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}. Upload PDF or TXT.")
 
@@ -202,15 +269,38 @@ async def upload(
     )
 
     # Optionally persist file to upload dir (best-effort)
+    stored_document: StudentDocument | None = None
     try:
         dest_dir = Path(settings.upload_dir) / student_id
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_path = dest_dir / f"{doc_id}{ext}"
         dest_path.write_bytes(data)
+        stored_document = _document_item_from_file(dest_path)
     except Exception:
         pass  # Storage failure doesn't break the response
 
     return UploadResponse(
         filename=filename,
         message=f"Uploaded and indexed {len(chunks)} chunks from {filename}.",
+        document=stored_document,
     )
+
+
+@router.get("/{student_id}/documents", response_model=list[StudentDocument])
+async def list_documents(student_id: str) -> list[StudentDocument]:
+    return _list_student_documents(student_id)
+
+
+@router.get("/{student_id}/documents/{doc_id}/download")
+async def download_document(student_id: str, doc_id: str):
+    doc_dir = Path(settings.upload_dir) / student_id
+    if doc_dir.exists():
+        for path in doc_dir.iterdir():
+            if path.stem == doc_id and path.is_file():
+                media_type = _MIME_TYPES.get(path.suffix.lower(), "application/octet-stream")
+                return FileResponse(
+                    str(path),
+                    media_type=media_type,
+                    headers={"Content-Disposition": f'inline; filename="{path.name}"'},
+                )
+    raise HTTPException(status_code=404, detail="Document not found")

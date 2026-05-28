@@ -86,6 +86,17 @@ export interface ChatTurn {
 export interface UploadResponse {
   filename: string;
   message: string;
+  document: StudentDocument | null;
+}
+
+export interface StudentDocument {
+  filename: string;
+  doc_id: string;
+  doc_type: string;
+  ext: string;
+  is_image: boolean;
+  size_bytes: number;
+  uploaded_at: string;
 }
 
 export interface GoogleAuthResponse {
@@ -178,15 +189,27 @@ export async function chat(
 export async function uploadFile(
   student_id: string,
   file: File,
-  docType?: string
+  docType?: string,
+  displayFilename?: string
 ): Promise<UploadResponse> {
   const fd = new FormData();
   fd.append("student_id", student_id);
   fd.append("file", file);
   if (docType) fd.append("doc_type", docType);
+  if (displayFilename) fd.append("display_filename", displayFilename);
   return handle<UploadResponse>(
     await fetch(`${BASE}/upload`, { method: "POST", body: fd })
   );
+}
+
+export async function getStudentDocuments(student_id: string): Promise<StudentDocument[]> {
+  return handle<StudentDocument[]>(
+    await fetch(`${BASE}/upload/${student_id}/documents`)
+  );
+}
+
+export function getStudentDocumentDownloadUrl(studentId: string, docId: string): string {
+  return `${BASE}/upload/${studentId}/documents/${docId}/download`;
 }
 
 export async function getChatHistory(
