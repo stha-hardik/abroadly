@@ -20,12 +20,15 @@ export default function OnboardingPage() {
   return (
     <main className="min-h-screen bg-[#f6f8fb] text-[#172033]">
       <div className="relative overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-[360px] bg-[#12244a]" />
+        {/* Background layers — cover the FULL hero (not a fixed 360px band)
+            so navy stays behind every line of headline copy and every trust
+            pill, even when the right-hand card pushes the section taller. */}
+        <div className="absolute inset-0 bg-[#12244a]" />
         <div
-          className="absolute inset-x-0 top-0 h-[360px] bg-cover bg-center opacity-[0.24]"
+          className="absolute inset-0 bg-cover bg-center opacity-[0.24]"
           style={{ backgroundImage: "url('/images/abroadly-hero.png')" }}
         />
-        <div className="absolute inset-x-0 top-0 h-[360px] bg-[linear-gradient(90deg,rgba(18,36,74,0.96),rgba(18,36,74,0.78),rgba(18,36,74,0.42))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(18,36,74,0.96),rgba(18,36,74,0.78),rgba(18,36,74,0.42))]" />
 
         <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
           <Link href="/" className="ab-focus flex items-center gap-3 rounded-md text-white">
@@ -44,12 +47,12 @@ export default function OnboardingPage() {
           </Link>
         </header>
 
-        <section className="relative z-10 mx-auto grid max-w-7xl gap-8 px-5 pb-16 pt-10 sm:px-8 lg:grid-cols-[1fr_0.82fr] lg:items-start lg:pt-16">
+        <section className="relative z-10 mx-auto grid max-w-7xl gap-8 px-5 pb-20 pt-10 sm:px-8 lg:grid-cols-[1fr_0.82fr] lg:items-start lg:pt-16">
           <div className="max-w-3xl pt-2 text-white">
             <p className="text-sm font-black uppercase tracking-normal text-[#8fe6c4]">
               Secure student access
             </p>
-            <h1 className="mt-4 max-w-2xl text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
+            <h1 className="mt-4 max-w-2xl text-4xl font-black leading-tight sm:text-5xl">
               Sign in with Google before Abroadly creates your student profile.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 sm:text-lg">
