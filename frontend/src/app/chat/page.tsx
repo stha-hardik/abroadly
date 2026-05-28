@@ -263,8 +263,36 @@ function parseAnswer(raw: string): ParsedAnswer {
   return { body: body.trim(), actions };
 }
 
+/* Elegant, capped emoji enrichment for AI replies — each emoji at most once
+ * per reply (first mention only), so it accents rather than spams. */
+const COUNTRY_FLAGS: [RegExp, string][] = [
+  [/\bUnited Kingdom\b/i, "\u{1F1EC}\u{1F1E7}"],
+  [/\bUK\b/, "\u{1F1EC}\u{1F1E7}"],
+  [/\bAustralia\b/i, "\u{1F1E6}\u{1F1FA}"],
+  [/\bCanada\b/i, "\u{1F1E8}\u{1F1E6}"],
+  [/\b(?:United States|USA)\b/i, "\u{1F1FA}\u{1F1F8}"],
+  [/\bGermany\b/i, "\u{1F1E9}\u{1F1EA}"],
+  [/\bIreland\b/i, "\u{1F1EE}\u{1F1EA}"],
+  [/\bNew Zealand\b/i, "\u{1F1F3}\u{1F1FF}"],
+  [/\bNepal\b/i, "\u{1F1F3}\u{1F1F5}"],
+];
+const KEYWORD_EMOJI: [RegExp, string][] = [
+  [/\b(?:passport|visa)\b/i, "\u{1F6C2}"],
+  [/\b(?:universit(?:y|ies)|degree|graduat(?:e|ion)|scholarship)\b/i, "\u{1F393}"],
+  [/\b(?:city|cities|campus|located|location)\b/i, "\u{1F4CD}"],
+];
+
+function enrichEmoji(text: string): string {
+  let out = text;
+  for (const [re, emoji] of [...COUNTRY_FLAGS, ...KEYWORD_EMOJI]) {
+    if (out.includes(emoji)) continue; // each emoji at most once
+    out = out.replace(re, (m) => `${emoji} ${m}`); // first match only (no /g)
+  }
+  return out;
+}
+
 function FormattedBody({ text }: { text: string }) {
-  const lines = text.split("\n");
+  const lines = enrichEmoji(text).split("\n");
   return (
     <div className="chat-bubble-text">
       {lines.map((line, i) => {
