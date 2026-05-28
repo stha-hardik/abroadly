@@ -604,10 +604,42 @@ body {
   background: rgba(0, 0, 0, 0.15);
 }
 
+/* ── Landing page — Notion-style entrance + helpers ────────────────── */
+
+@keyframes abFadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ab-fade-up {
+  opacity: 0;
+  animation: abFadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.ab-d1 { animation-delay: 0.05s; }
+.ab-d2 { animation-delay: 0.13s; }
+.ab-d3 { animation-delay: 0.21s; }
+.ab-d4 { animation-delay: 0.29s; }
+.ab-d5 { animation-delay: 0.40s; }
+
+/* Subtle dotted texture for hero backdrop — warm, almost invisible */
+.ab-dot-grid {
+  background-image: radial-gradient(rgba(27, 25, 22, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Soft mint→paper glow behind the hero product card */
+.ab-hero-glow {
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(125, 219, 177, 0.22) 0%, rgba(125, 219, 177, 0) 70%),
+    radial-gradient(40% 40% at 80% 20%, rgba(18, 36, 74, 0.08) 0%, rgba(18, 36, 74, 0) 70%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
+
+  .ab-fade-up { opacity: 1; animation: none; }
 
   *,
   *::before,
