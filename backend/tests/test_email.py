@@ -48,10 +48,10 @@ def test_first_name_falls_back_for_empty():
 # ---------------------------------------------------------------------------
 # send_email — config gating
 # ---------------------------------------------------------------------------
-def test_send_email_skips_when_smtp_unconfigured():
-    """In dev with no SMTP_PASSWORD, we don't try to send and don't raise."""
-    with patch.object(email_module.settings, "smtp_password", ""), \
-         patch.object(email_module.settings, "email_from_address", ""):
+def test_send_email_skips_when_smtp_password_unset():
+    """In dev with no SMTP_PASSWORD, we don't try to send and don't raise.
+    Other SMTP fields can have defaults; password is the only one we gate on."""
+    with patch.object(email_module.settings, "smtp_password", ""):
         with patch("app.core.email.aiosmtplib.send", new_callable=AsyncMock) as mock_send:
             result = _run(send_email(to="s@example.com", subject="x", html="<p>x</p>", text="x"))
     assert result is False
