@@ -177,11 +177,13 @@ export async function chat(
 
 export async function uploadFile(
   student_id: string,
-  file: File
+  file: File,
+  docType?: string
 ): Promise<UploadResponse> {
   const fd = new FormData();
   fd.append("student_id", student_id);
   fd.append("file", file);
+  if (docType) fd.append("doc_type", docType);
   return handle<UploadResponse>(
     await fetch(`${BASE}/upload`, { method: "POST", body: fd })
   );

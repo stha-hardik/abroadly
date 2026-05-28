@@ -8,6 +8,7 @@ import {
   getStudentChat,
   getStudentDocs,
   getDocDownloadUrl,
+  fetchDocObjectUrl,
   toggleAI,
   sendCounselorReply,
   type StudentDetail,
@@ -29,6 +30,65 @@ function timeAgo(dateStr: string): string {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+const DOC_TYPE_LABELS: Record<string, { label: string; icon: string }> = {
+  grade_sheet: { label: "Grade Sheet / Transcript", icon: "\u{1F4CA}" },
+  citizenship: { label: "Citizenship", icon: "\u{1F1F3}\u{1F1F5}" },
+  passport: { label: "Passport", icon: "\u{1F6C2}" },
+  sop: { label: "Statement of Purpose", icon: "\u{270D}\u{FE0F}" },
+  recommendation: { label: "Recommendation Letter", icon: "\u{1F4E8}" },
+  financial: { label: "Financial Documents", icon: "\u{1F3E6}" },
+  ielts: { label: "IELTS / PTE / TOEFL", icon: "\u{1F4DD}" },
+  other: { label: "Document", icon: "\u{1F4CE}" },
+};
+
+function docTypeMeta(t: string) {
+  return DOC_TYPE_LABELS[t] || DOC_TYPE_LABELS.other;
+}
+
+/* Single document row with an authed image preview (object URL). */
+function DocCard({ studentId, doc }: { studentId: string; doc: DocItem }) {
+  const [preview, setPreview] = useState<string | null>(null);
+  const meta = docTypeMeta(doc.doc_type);
+
+  useEffect(() => {
+    let url: string | null = null;
+    let cancelled = false;
+    if (doc.is_image) {
+      fetchDocObjectUrl(studentId, doc.doc_id)
+        .then((u) => { if (!cancelled) { url = u; setPreview(u); } })
+        .catch(() => {});
+    }
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
+  }, [studentId, doc.doc_id, doc.is_image]);
+
+  return (
+    <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 p-3.5">
+      {preview ? (
+        <img src={preview} alt={meta.label} className="h-14 w-14 shrink-0 rounded-lg object-cover ring-1 ring-black/5" />
+      ) : (
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[#F4F2EC] text-2xl">
+          {meta.icon}
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-bold text-[var(--ab-ink)] truncate">{meta.label}</p>
+        <p className="text-[11px] text-gray-500 truncate">{doc.filename}</p>
+        <p className="text-[10px] text-gray-400 mt-0.5">
+          {doc.ext.replace(".", "").toUpperCase()} {"\u{00B7}"} {formatBytes(doc.size_bytes)} {"\u{00B7}"} {timeAgo(doc.uploaded_at)}
+        </p>
+      </div>
+      <a
+        href={getDocDownloadUrl(studentId, doc.doc_id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5 text-[11px] font-semibold text-gray-600 hover:bg-gray-100 transition"
+      >
+        Open
+      </a>
+    </div>
+  );
 }
 
 type Tab = "chat" | "documents" | "profile";
@@ -269,28 +329,7 @@ export default function StudentDetailPage() {
             ) : (
               <div className="space-y-2">
                 {docs.map((doc) => (
-                  <div key={doc.doc_id} className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-[var(--ab-plum)]">
-                      <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none">
-                        <path d="M6 2h5.172a2 2 0 0 1 1.414.586l3.828 3.828A2 2 0 0 1 17 7.828V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M11 2v4a2 2 0 0 0 2 2h4" stroke="currentColor" strokeWidth="1.5" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-[var(--ab-ink)] truncate">{doc.filename}</p>
-                      <p className="text-[10px] text-gray-400">
-                        {formatBytes(doc.size_bytes)} {"\u{00B7}"} {timeAgo(doc.uploaded_at)}
-                      </p>
-                    </div>
-                    <a
-                      href={getDocDownloadUrl(id!, doc.doc_id)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5 text-[11px] font-semibold text-gray-600 hover:bg-gray-100 transition"
-                    >
-                      Download
-                    </a>
-                  </div>
+                  <DocCard key={doc.doc_id} studentId={id!} doc={doc} />
                 ))}
               </div>
             )}

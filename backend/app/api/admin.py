@@ -98,6 +98,9 @@ class ReplyRequest(BaseModel):
 class DocItem(BaseModel):
     filename: str
     doc_id: str
+    doc_type: str
+    ext: str
+    is_image: bool
     size_bytes: int
     uploaded_at: str
 
@@ -137,6 +140,9 @@ def _count_student_docs(student_id: str) -> int:
     return len([f for f in doc_dir.iterdir() if f.is_file()])
 
 
+_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
+
+
 def _list_student_docs(student_id: str) -> list[DocItem]:
     doc_dir = Path(settings.upload_dir) / student_id
     if not doc_dir.exists():
@@ -147,17 +153,24 @@ def _list_student_docs(student_id: str) -> list[DocItem]:
         if not f.is_file():
             continue
         doc_id = f.stem
+        ext = f.suffix.lower()
         title = f.name
+        doc_type = "other"
         try:
             results = collection.get(where={"doc_id": doc_id}, limit=1, include=["metadatas"])
-            if results and results.get("metadatas") and len(results["metadatas"]) > 0:
-                title = results["metadatas"][0].get("title", f.name)
+            metas = results.get("metadatas") if results else None
+            if metas and len(metas) > 0:
+                title = metas[0].get("title", f.name)
+                doc_type = metas[0].get("doc_type", "other") or "other"
         except Exception:
             pass
         stat = f.stat()
         docs.append(DocItem(
             filename=title,
             doc_id=doc_id,
+            doc_type=doc_type,
+            ext=ext,
+            is_image=ext in _IMAGE_EXTS,
             size_bytes=stat.st_size,
             uploaded_at=datetime.fromtimestamp(stat.st_mtime).isoformat(),
         ))
@@ -384,9 +397,16 @@ async def admin_download_document(
 ):
     _parse_uuid(student_id)
     doc_dir = Path(settings.upload_dir) / student_id
-    for f in doc_dir.iterdir():
-        if f.stem == doc_id and f.is_file():
-            return FileResponse(str(f), filename=f.name, media_type="application/octet-stream")
+    mime_map = {
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+        ".webp": "image/webp", ".pdf": "application/pdf", ".txt": "text/plain",
+    }
+    if doc_dir.exists():
+        for f in doc_dir.iterdir():
+            if f.stem == doc_id and f.is_file():
+                media = mime_map.get(f.suffix.lower(), "application/octet-stream")
+                # inline so admins can preview images/PDFs in-browser
+                return FileResponse(str(f), media_type=media, headers={"Content-Disposition": f'inline; filename="{f.name}"'})
     raise HTTPException(status_code=404, detail="Document not found")
 
 

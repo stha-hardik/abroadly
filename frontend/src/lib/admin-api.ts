@@ -123,6 +123,9 @@ export async function getStudentChat(id: string): Promise<ChatTurn[]> {
 export interface DocItem {
   filename: string;
   doc_id: string;
+  doc_type: string;
+  ext: string;
+  is_image: boolean;
   size_bytes: number;
   uploaded_at: string;
 }
@@ -133,6 +136,18 @@ export async function getStudentDocs(id: string): Promise<DocItem[]> {
 
 export function getDocDownloadUrl(studentId: string, docId: string): string {
   return `${BASE}/students/${studentId}/documents/${docId}/download`;
+}
+
+/** Fetch a document with the admin JWT and return an object URL (for <img>
+ * previews, since <img src> can't send an Authorization header). */
+export async function fetchDocObjectUrl(studentId: string, docId: string): Promise<string> {
+  const token = getToken();
+  const res = await fetch(`${BASE}/students/${studentId}/documents/${docId}/download`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Failed to load document");
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
 }
 
 export async function getGlobalAI(): Promise<{ paused: boolean }> {
