@@ -6,7 +6,10 @@ import { useRouter } from "next/navigation";
 import {
   chat,
   uploadFile,
+  getStudent,
+  getCurrentStudent,
   getChatHistory,
+  logoutStudent,
   type ChatResponse,
   type ChatSource,
 } from "@/lib/api";
@@ -707,14 +710,43 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const sid = localStorage.getItem("abroadly_student_id");
-    if (!sid) {
-      router.push("/onboarding");
-      return;
-    }
-    setStudentId(sid);
-    getChatHistory(sid)
-      .then((turns) => {
+    let cancelled = false;
+
+    async function restoreSession() {
+      let sid = localStorage.getItem("abroadly_student_id");
+
+      if (!sid) {
+        try {
+          const current = await getCurrentStudent();
+          if (!current.profile_completed) {
+            router.replace("/onboarding/details");
+            return;
+          }
+          sid = current.id;
+          localStorage.setItem("abroadly_student_id", current.id);
+        } catch {
+          router.replace("/onboarding");
+          return;
+        }
+      }
+
+      try {
+        const student = await getStudent(sid);
+        if (!student.profile_completed) {
+          router.replace("/onboarding/details");
+          return;
+        }
+      } catch {
+        router.replace("/onboarding");
+        return;
+      }
+
+      if (cancelled) return;
+      setStudentId(sid);
+
+      try {
+        const turns = await getChatHistory(sid);
+        if (cancelled) return;
         const restored: Message[] = turns.map((t): Message => {
           if (t.role === "user") return { role: "user", text: t.content };
           if (t.role === "counselor") return { role: "counselor", text: t.content };
@@ -734,8 +766,15 @@ export default function ChatPage() {
           };
         });
         setMessages(restored);
-      })
-      .catch(() => {});
+      } catch {
+        // Empty history is fine; the first prompt can start a new conversation.
+      }
+    }
+
+    restoreSession();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   useEffect(() => {
@@ -947,8 +986,10 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={() => {
-                localStorage.removeItem("abroadly_student_id");
-                router.push("/onboarding");
+                logoutStudent().finally(() => {
+                  localStorage.removeItem("abroadly_student_id");
+                  router.push("/onboarding");
+                });
               }}
               className="ab-focus chat-header-btn"
             >

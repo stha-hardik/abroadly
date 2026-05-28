@@ -31,10 +31,12 @@ class StudentModel(Base):
     location = Column(String, nullable=True)
     education_level = Column(String, nullable=False)
     gpa = Column(Float, nullable=True)
+    expected_gpa = Column(Float, nullable=True)
     target_countries = Column(JSONB, nullable=False, default=list)
     preferred_field = Column(String, nullable=True)
     goals = Column(Text, nullable=True)
     ai_paused = Column(Boolean, default=False, server_default="false")
+    profile_completed = Column(Boolean, default=True, server_default="true")
     created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
     updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
 
@@ -64,6 +66,7 @@ class StudentBase(BaseModel):
     location: str | None = Field(None, description="City / district in Nepal")
     education_level: EducationLevel
     gpa: float | None = Field(None, ge=0, le=4.5)
+    expected_gpa: float | None = Field(None, ge=0, le=4.5)
     target_countries: list[str] = Field(default_factory=list)
     goals: str | None = Field(None, max_length=2000)
     preferred_field: str | None = None
@@ -79,6 +82,7 @@ class StudentUpdate(BaseModel):
     location: str | None = None
     education_level: EducationLevel | None = None
     gpa: float | None = Field(None, ge=0, le=4.5)
+    expected_gpa: float | None = Field(None, ge=0, le=4.5)
     target_countries: list[str] | None = None
     goals: str | None = None
     preferred_field: str | None = None
@@ -89,6 +93,7 @@ class StudentOut(StudentBase):
 
     id: str
     ai_paused: bool = False
+    profile_completed: bool = True
     created_at: datetime
     updated_at: datetime
 

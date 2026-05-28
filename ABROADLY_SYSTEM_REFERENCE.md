@@ -101,7 +101,8 @@ Framework: Next.js 14 App Router, React 18, Tailwind CSS 4, Plus Jakarta Sans fo
 | Path | File | Description |
 |------|------|-------------|
 | `/` | `page.tsx` | Landing page with hero, how-it-works, topics |
-| `/onboarding` | `onboarding/page.tsx` | Student profile creation form |
+| `/onboarding` | `onboarding/page.tsx` | Google-only student sign-in entry |
+| `/onboarding/details` | `onboarding/details/page.tsx` | One-time post-Google profile details form |
 | `/chat` | `chat/page.tsx` | AI chat with document upload panel |
 | `/auth/google/callback` | `auth/google/callback/page.tsx` | Google OAuth callback page; exchanges code through backend |
 | `/admin/login` | `admin/login/page.tsx` | Admin login |
@@ -149,7 +150,7 @@ Framework: FastAPI, SQLAlchemy async, Postgres, Chroma, Groq + Gemini.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/students` | none | Create or upsert student (by email) |
+| `POST` | `/students` | none | Legacy create/upsert student endpoint; current student UI uses Google OAuth |
 | `GET` | `/students/{id}` | none | Get student profile |
 | `PUT` | `/students/{id}` | none | Update student profile |
 | `POST` | `/chat` | none | AI chat (checks ai_paused flag) |
@@ -157,7 +158,10 @@ Framework: FastAPI, SQLAlchemy async, Postgres, Chroma, Groq + Gemini.
 | `POST` | `/upload` | none | Upload document (PDF, TXT, JPG, PNG) |
 | `GET` | `/health` | none | Health check |
 | `GET` | `/auth/google/login` | none | Redirect student to Google OAuth |
-| `POST` | `/auth/google/exchange` | state cookie | Exchange Google code server-side and return student profile |
+| `POST` | `/auth/google/exchange` | state cookie | Exchange Google code server-side, set student session cookie, and return student profile |
+| `GET` | `/auth/me` | student session cookie | Return the current Google-authenticated student |
+| `PUT` | `/auth/profile` | student session cookie | Save the one-time student profile details and mark profile completed |
+| `POST` | `/auth/logout` | student session cookie | Clear the student session cookie |
 | `POST` | `/admin/login` | none | Admin login, returns JWT |
 | `GET` | `/admin/stats` | JWT | Dashboard stats |
 | `GET` | `/admin/students` | JWT | Paginated student list with search |
@@ -261,8 +265,12 @@ PARTIAL_ANSWER_MIN_SCORE = 0.05    # LLM always called for in-scope queries
 - Browser starts at `/api/auth/google/login`.
 - Google redirects to `https://abroadly.online/auth/google/callback`.
 - The frontend callback page posts the returned `code` and `state` to `/api/auth/google/exchange`.
-- The backend validates the HttpOnly state cookie, exchanges the code with Google, requires a verified email, creates/finds the `students` row by email, and returns the student id.
-- The frontend stores `abroadly_student_id` in localStorage, preserving the existing chat flow.
+- The backend validates the HttpOnly state cookie, exchanges the code with Google, requires a verified email, creates/finds the `students` row by email, returns the student id, and sets an HttpOnly `abroadly_student_session` cookie.
+- New Google-created students have `profile_completed=false` and are redirected to `/onboarding/details`.
+- `/onboarding/details` saves full name, phone, location, education level, current GPA, expected GPA, preferred field, target countries, and goals through `/api/auth/profile`, then sets `profile_completed=true`.
+- Completed students skip `/onboarding/details` on future sign-ins and go straight to `/chat`.
+- `/chat` refuses students whose `profile_completed` flag is false, so a fresh Google student cannot chat before the profile details are saved.
+- The frontend stores `abroadly_student_id` in localStorage for the existing chat API, but profile completion itself is protected by the HttpOnly student session cookie.
 - Client secret is never exposed to frontend code.
 
 ### Document Uploads

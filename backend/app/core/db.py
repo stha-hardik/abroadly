@@ -48,9 +48,11 @@ CREATE TABLE IF NOT EXISTS students (
     location TEXT,
     education_level TEXT NOT NULL,
     gpa FLOAT,
+    expected_gpa FLOAT,
     target_countries JSONB DEFAULT '[]',
     preferred_field TEXT,
     goals TEXT,
+    profile_completed BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -100,6 +102,27 @@ _ADD_AI_PAUSED = """
 ALTER TABLE students ADD COLUMN IF NOT EXISTS ai_paused BOOLEAN DEFAULT FALSE;
 """
 
+_ADD_EXPECTED_GPA = """
+ALTER TABLE students ADD COLUMN IF NOT EXISTS expected_gpa FLOAT;
+"""
+
+_ADD_PROFILE_COMPLETED = """
+ALTER TABLE students ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT FALSE;
+UPDATE students
+SET profile_completed = TRUE
+WHERE profile_completed IS NOT TRUE
+  AND (
+    phone IS NOT NULL
+    OR location IS NOT NULL
+    OR gpa IS NOT NULL
+    OR expected_gpa IS NOT NULL
+    OR preferred_field IS NOT NULL
+    OR goals IS NOT NULL
+    OR jsonb_array_length(COALESCE(target_countries, '[]'::jsonb)) > 0
+  );
+ALTER TABLE students ALTER COLUMN profile_completed SET DEFAULT TRUE;
+"""
+
 _FIX_ROLE_CONSTRAINT = """
 DO $$ BEGIN
     ALTER TABLE chat_turns DROP CONSTRAINT IF EXISTS chat_turns_role_check;
@@ -119,4 +142,6 @@ async def create_tables() -> None:
         await conn.execute(text(_CREATE_CHAT_TURNS))
         await conn.execute(text(_CREATE_CHAT_TURNS_INDEX))
         await conn.execute(text(_ADD_AI_PAUSED))
+        await conn.execute(text(_ADD_EXPECTED_GPA))
+        await conn.execute(text(_ADD_PROFILE_COMPLETED))
         await conn.execute(text(_FIX_ROLE_CONSTRAINT))

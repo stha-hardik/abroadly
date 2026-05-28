@@ -161,6 +161,8 @@ async def chat_endpoint(
     student_model = result.scalar_one_or_none()
     if not student_model:
         raise HTTPException(status_code=404, detail="student_not_found")
+    if not student_model.profile_completed:
+        raise HTTPException(status_code=403, detail="student_profile_incomplete")
 
     student = {
         "id": str(student_model.id),
@@ -168,6 +170,7 @@ async def chat_endpoint(
         "email": student_model.email,
         "education_level": student_model.education_level,
         "gpa": student_model.gpa,
+        "expected_gpa": student_model.expected_gpa,
         "target_countries": student_model.target_countries,
         "preferred_field": student_model.preferred_field,
         "location": student_model.location,

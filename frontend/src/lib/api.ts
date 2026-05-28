@@ -18,7 +18,20 @@ export interface StudentCreate {
   location?: string;
   education_level: EducationLevel;
   gpa?: number;
+  expected_gpa?: number;
   target_countries?: string[];
+  goals?: string;
+  preferred_field?: string;
+}
+
+export interface CompleteProfilePayload {
+  full_name: string;
+  phone?: string;
+  location?: string;
+  education_level: EducationLevel;
+  gpa?: number;
+  expected_gpa?: number;
+  target_countries: string[];
   goals?: string;
   preferred_field?: string;
 }
@@ -31,9 +44,12 @@ export interface StudentOut {
   location: string | null;
   education_level: EducationLevel;
   gpa: number | null;
+  expected_gpa: number | null;
   target_countries: string[];
   goals: string | null;
   preferred_field: string | null;
+  ai_paused: boolean;
+  profile_completed: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -115,6 +131,34 @@ export async function createStudent(payload: StudentCreate): Promise<StudentOut>
 
 export async function getStudent(id: string): Promise<StudentOut> {
   return handle<StudentOut>(await fetch(`${BASE}/students/${id}`));
+}
+
+export async function getCurrentStudent(): Promise<StudentOut> {
+  return handle<StudentOut>(
+    await fetch(`${BASE}/auth/me`, {
+      credentials: "include",
+    })
+  );
+}
+
+export async function completeGoogleProfile(
+  payload: CompleteProfilePayload
+): Promise<StudentOut> {
+  return handle<StudentOut>(
+    await fetch(`${BASE}/auth/profile`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+  );
+}
+
+export async function logoutStudent(): Promise<void> {
+  await fetch(`${BASE}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  }).catch(() => {});
 }
 
 export async function chat(

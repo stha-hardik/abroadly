@@ -29,7 +29,7 @@ function GoogleCallbackInner() {
       .then((res) => {
         if (cancelled) return;
         localStorage.setItem("abroadly_student_id", res.student.id);
-        router.replace("/chat");
+        router.replace(res.student.profile_completed ? "/chat" : "/onboarding/details");
       })
       .catch(() => {
         if (!cancelled) setError("Google sign-in failed. Please try again.");
@@ -64,7 +64,7 @@ function GoogleCallbackInner() {
               href="/onboarding"
               className="ab-focus rounded-md border border-[#d9d3ea] bg-white px-5 py-3 text-sm font-black text-[#342456] transition hover:border-[#673de6]"
             >
-              Continue manually
+              Back to sign-in
             </Link>
           </div>
         )}

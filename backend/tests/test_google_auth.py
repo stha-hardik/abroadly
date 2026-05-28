@@ -26,6 +26,15 @@ def test_google_authorize_url_uses_configured_redirect(monkeypatch):
     assert "profile" in params["scope"][0]
 
 
+def test_student_session_token_round_trips(monkeypatch):
+    student_id = "3a2f37dd-329a-4b80-b7ef-1a7f72f83fd7"
+    monkeypatch.setattr(settings, "jwt_secret", "test-secret-for-google-student-cookie")
+
+    token = auth._create_student_session_token(student_id)
+
+    assert auth._decode_student_session_token(token) == student_id
+
+
 @pytest.mark.asyncio
 async def test_google_profile_requires_verified_email():
     with pytest.raises(HTTPException) as exc:

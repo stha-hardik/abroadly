@@ -9,16 +9,16 @@ const assurances = [
 
 const steps = [
   {
-    title: "Create your student profile",
-    body: "Tell Abroadly your education level, target countries, field, and goals.",
+    title: "Sign in with Google",
+    body: "Start with a verified email before Abroadly creates your student profile.",
+  },
+  {
+    title: "Complete details once",
+    body: "Add education level, GPA, expected GPA, target countries, field, and goals.",
   },
   {
     title: "Ask direct questions",
     body: "Get grounded guidance on admissions, documents, costs, visas, and next steps.",
-  },
-  {
-    title: "Verify before you act",
-    body: "Use the answer as a starting point, then check the cited official source.",
   },
 ];
 
@@ -61,7 +61,7 @@ export default function Home() {
               href="/onboarding"
               className="ab-focus rounded-md bg-white px-4 py-2 text-sm font-black text-[#21143d] transition hover:bg-[#00d6a3]"
             >
-              Start free
+              Sign in
             </Link>
           </nav>
         </div>
@@ -81,15 +81,10 @@ export default function Home() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/onboarding"
-                className="ab-focus ab-button-shadow rounded-md bg-[#00d6a3] px-6 py-4 text-center text-base font-black text-[#21143d] transition hover:-translate-y-0.5 hover:bg-[#36f0c1]"
-              >
-                Create my profile
-              </Link>
               <GoogleSignInButton
-                label="Sign in with Google"
-                className="px-6 py-4 text-base hover:-translate-y-0.5"
+                label="Continue with Google"
+                caption="Verified student access"
+                className="px-6 py-4 text-base"
               />
               <Link
                 href="/chat"
@@ -171,7 +166,7 @@ export default function Home() {
           href="/onboarding"
           className="ab-focus rounded-md bg-[#673de6] px-6 py-4 text-center font-black text-white transition hover:-translate-y-0.5 hover:bg-[#5025d1]"
         >
-          Start with your profile
+          Sign in with Google
         </Link>
       </section>
     </main>
