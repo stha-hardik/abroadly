@@ -58,12 +58,12 @@ export default function Home() {
     <main className="min-h-screen overflow-hidden bg-[#fbfaf7] text-[#172033]">
       <section className="relative min-h-[92vh] overflow-hidden bg-[#12244a]">
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="pointer-events-none absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/images/abroadly-hero.png')" }}
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(18,36,74,0.94)_0%,rgba(18,36,74,0.82)_42%,rgba(18,36,74,0.38)_76%,rgba(18,36,74,0.12)_100%)]" />
-        <div className="absolute bottom-0 left-0 right-0 h-36 bg-[linear-gradient(180deg,rgba(251,250,247,0)_0%,#fbfaf7_92%)]" />
-        <div className="absolute inset-x-0 top-0 z-10 border-b border-white/15 bg-[#12244a]/38 backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(18,36,74,0.94)_0%,rgba(18,36,74,0.82)_42%,rgba(18,36,74,0.38)_76%,rgba(18,36,74,0.12)_100%)]" />
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-36 bg-[linear-gradient(180deg,rgba(251,250,247,0)_0%,#fbfaf7_92%)]" />
+        <div className="absolute inset-x-0 top-0 z-30 border-b border-white/15 bg-[#12244a]/38 backdrop-blur-xl">
           <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
             <Link href="/" className="ab-focus flex items-center gap-3 rounded-md text-white">
               <img src="/images/abroadly-logo.png" alt="Abroadly" className="h-9 w-9 rounded-md" />
