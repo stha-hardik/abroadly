@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Welcome to Abroadly</title>
+</head>
+<body style="margin:0;padding:0;background:#f6f8fb;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#172033;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f6f8fb;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="max-width:560px;background:#ffffff;border:1px solid #e4e8f0;border-radius:14px;overflow:hidden;">
+          <!-- Header band -->
+          <tr>
+            <td style="background:#12244a;padding:24px 28px;color:#ffffff;">
+              <p style="margin:0;font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#8fe6c4;">Abroadly</p>
+              <h1 style="margin:6px 0 0;font-size:22px;font-weight:800;line-height:1.3;">Welcome aboard, {{ first_name }}.</h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:28px;">
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#172033;">
+                Glad you&rsquo;re here. Abroadly is your free study-abroad guide &mdash; built for Nepali students, grounded in real official sources, and honest when it doesn&rsquo;t know.
+              </p>
+              <p style="margin:0 0 22px;font-size:15px;line-height:1.7;color:#172033;">
+                Three quick things you can do right now:
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 22px;">
+                <tr>
+                  <td style="padding:14px 16px;background:#f8fafc;border:1px solid #e4e8f0;border-radius:10px;">
+                    <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#172033;">1. Ask the AI anything</p>
+                    <p style="margin:0;font-size:13px;line-height:1.65;color:#596579;">
+                      Open the chat and try &ldquo;What documents do I need for a UK student visa?&rdquo; &mdash; or ask in Nepali / Hinglish, the AI will understand.
+                    </p>
+                  </td>
+                </tr>
+                <tr><td style="height:10px;line-height:10px;">&nbsp;</td></tr>
+                <tr>
+                  <td style="padding:14px 16px;background:#f8fafc;border:1px solid #e4e8f0;border-radius:10px;">
+                    <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#172033;">2. Upload your documents</p>
+                    <p style="margin:0;font-size:13px;line-height:1.65;color:#596579;">
+                      Transcript, passport, IELTS scorecard &mdash; drop them in the chat. The AI will reference them in every future answer.
+                    </p>
+                  </td>
+                </tr>
+                <tr><td style="height:10px;line-height:10px;">&nbsp;</td></tr>
+                <tr>
+                  <td style="padding:14px 16px;background:#f8fafc;border:1px solid #e4e8f0;border-radius:10px;">
+                    <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#172033;">3. Come back any time</p>
+                    <p style="margin:0;font-size:13px;line-height:1.65;color:#596579;">
+                      Your conversation is saved. Pick up where you left off, even months later.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="border-radius:10px;background:#12244a;">
+                    <a href="{{ chat_url }}"
+                       style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:10px;">
+                      Open the chat
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:24px 0 0;font-size:13px;line-height:1.7;color:#596579;">
+                A few things worth knowing:
+              </p>
+              <ul style="margin:8px 0 0;padding:0 0 0 18px;font-size:13px;line-height:1.7;color:#596579;">
+                <li>Abroadly is free. We don&rsquo;t refer you to paid consultancies.</li>
+                <li>For binding decisions (visa filing, payments), always verify with the official source the AI points you at.</li>
+                <li>To delete your account or ask a privacy question, reply to this email.</li>
+              </ul>
+
+              <p style="margin:24px 0 0;font-size:14px;line-height:1.7;color:#172033;">
+                &mdash; The Abroadly team
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e4e8f0;font-size:11px;line-height:1.6;color:#7a8495;">
+              You&rsquo;re receiving this because you just created an account at
+              <a href="{{ site_url }}" style="color:#7a8495;text-decoration:underline;">{{ site_url }}</a>.
+              &nbsp;
+              <a href="{{ privacy_url }}" style="color:#7a8495;text-decoration:underline;">Privacy</a>
+              &nbsp;&middot;&nbsp;
+              <a href="{{ terms_url }}" style="color:#7a8495;text-decoration:underline;">Terms</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

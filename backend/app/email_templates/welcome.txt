@@ -1,0 +1,35 @@
+Hey {{ first_name }},
+
+Glad you're here. Abroadly is your free study-abroad guide — built for
+Nepali students, grounded in real official sources, and honest when it
+doesn't know.
+
+Three quick things you can do right now:
+
+  1. Ask the AI anything
+     Open the chat and try "What documents do I need for a UK student
+     visa?" — or ask in Nepali / Hinglish, the AI will understand.
+
+  2. Upload your documents
+     Transcript, passport, IELTS scorecard — drop them in the chat.
+     The AI will reference them in every future answer.
+
+  3. Come back any time
+     Your conversation is saved. Pick up where you left off, even
+     months later.
+
+Open the chat: {{ chat_url }}
+
+A few things worth knowing:
+  - Abroadly is free. We don't refer you to paid consultancies.
+  - For binding decisions (visa filing, payments), always verify with
+    the official source the AI points you at.
+  - To delete your account or ask a privacy question, just reply to
+    this email.
+
+— The Abroadly team
+
+---
+You're receiving this because you just created an account at {{ site_url }}.
+Privacy: {{ privacy_url }}
+Terms:   {{ terms_url }}

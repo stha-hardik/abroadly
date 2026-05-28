@@ -43,9 +43,25 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"
     max_upload_mb: int = 15
 
+    # Outbound email (transactional only — welcome emails for now).
+    # If smtp_password is empty, the email module no-ops silently (dev mode).
+    smtp_host: str = "smtp.hostinger.com"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    email_from_name: str = "Abroadly"
+    email_from_address: str = ""
+    # Public URLs included in email copy.
+    public_site_url: str = "https://abroadly.online"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def email_enabled(self) -> bool:
+        """Email sending only runs when password + from address are both set."""
+        return bool(self.smtp_password and self.email_from_address)
 
 
 settings = Settings()
