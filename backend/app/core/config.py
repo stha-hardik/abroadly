@@ -45,12 +45,16 @@ class Settings(BaseSettings):
 
     # Outbound email (transactional only — welcome emails for now).
     # If smtp_password is empty, the email module no-ops silently (dev mode).
+    # Defaults assume the live abroadly.online deployment via Hostinger
+    # mail; in prod, the only env var that NEEDS to be set is SMTP_PASSWORD.
+    # Forks running on a different domain should override SMTP_USERNAME +
+    # EMAIL_FROM_ADDRESS.
     smtp_host: str = "smtp.hostinger.com"
     smtp_port: int = 587
-    smtp_username: str = ""
+    smtp_username: str = "hello@abroadly.online"
     smtp_password: str = ""
     email_from_name: str = "Abroadly"
-    email_from_address: str = ""
+    email_from_address: str = "hello@abroadly.online"
     # Public URLs included in email copy.
     public_site_url: str = "https://abroadly.online"
 
@@ -60,8 +64,9 @@ class Settings(BaseSettings):
 
     @property
     def email_enabled(self) -> bool:
-        """Email sending only runs when password + from address are both set."""
-        return bool(self.smtp_password and self.email_from_address)
+        """Email sending runs as soon as SMTP_PASSWORD is set; other SMTP
+        fields have sensible defaults for the abroadly.online deployment."""
+        return bool(self.smtp_password)
 
 
 settings = Settings()
