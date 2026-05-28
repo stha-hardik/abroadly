@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GoogleSignInButton } from "../google-sign-in-button";
+import { SiteFooter } from "../site-footer";
 
 const trustItems = [
   {
@@ -122,6 +123,8 @@ export default function OnboardingPage() {
           </aside>
         </section>
       </div>
+
+      <SiteFooter />
     </main>
   );
 }

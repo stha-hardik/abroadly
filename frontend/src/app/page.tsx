@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GoogleSignInButton } from "./google-sign-in-button";
+import { SiteFooter } from "./site-footer";
 
 const assurances = [
   "Free for students",
@@ -218,6 +219,8 @@ export default function Home() {
           Start free with Google
         </Link>
       </section>
+
+      <SiteFooter />
     </main>
   );
 }
