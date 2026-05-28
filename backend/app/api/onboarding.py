@@ -4,11 +4,12 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
+from app.core.email import send_welcome_email
 from app.models.student import StudentCreate, StudentModel, StudentOut, StudentUpdate
 
 router = APIRouter()
@@ -27,14 +28,21 @@ def _to_out(model: StudentModel) -> StudentOut:
 @router.post("", response_model=StudentOut, status_code=201)
 async def create_student(
     payload: StudentCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_session),
 ) -> StudentOut:
-    """Create a new student profile, or return existing one if email matches."""
+    """Create a new student profile, or return existing one if email matches.
+
+    On *first* creation, enqueue a welcome email via FastAPI BackgroundTasks
+    (runs AFTER the response is returned, so the student doesn't wait, and a
+    mail failure can't block account creation).
+    """
     result = await db.execute(
         select(StudentModel).where(StudentModel.email == payload.email)
     )
     existing = result.scalar_one_or_none()
     if existing:
+        # Re-login / profile update — DO NOT re-send the welcome email.
         for field, value in payload.model_dump(exclude={"email"}).items():
             if value is not None:
                 setattr(existing, field, value)
@@ -52,6 +60,15 @@ async def create_student(
     db.add(student)
     await db.commit()
     await db.refresh(student)
+
+    # Fire-and-forget welcome email. send_welcome_email() swallows exceptions
+    # and no-ops if SMTP isn't configured, so this is always safe.
+    background_tasks.add_task(
+        send_welcome_email,
+        to=student.email,
+        full_name=student.full_name or "",
+    )
+
     return _to_out(student)
 
 

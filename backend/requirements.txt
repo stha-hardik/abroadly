@@ -33,6 +33,9 @@ bcrypt>=4.1
 python-dotenv>=1.0
 httpx>=0.27
 
+# Email (transactional — welcome emails via Hostinger SMTP)
+aiosmtplib>=3.0
+
 # Dev
 pytest>=8.3
 pytest-asyncio>=0.23
