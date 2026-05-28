@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createStudent, type EducationLevel } from "@/lib/api";
+import { GoogleSignInButton } from "../google-sign-in-button";
 
 type Step = 1 | 2 | 3;
 
@@ -170,6 +171,19 @@ export default function OnboardingPage() {
                 />
               </div>
             </div>
+
+            {step === 1 && (
+              <div className="mb-8 rounded-md border border-[#ded8ee] bg-[#fbfaf7] p-4">
+                <GoogleSignInButton variant="outline" className="w-full" />
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="h-px flex-1 bg-[#ded8ee]" />
+                  <span className="text-xs font-black uppercase text-[#948ba8]">
+                    or fill manually
+                  </span>
+                  <span className="h-px flex-1 bg-[#ded8ee]" />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-5">
               {step === 1 && (

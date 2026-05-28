@@ -81,9 +81,14 @@ CORS_ORIGINS=https://abroadly.online,http://abroadly.online
 ADMIN_USERNAME=username
 ADMIN_PASSWORD_HASH=<bcrypt hash>
 JWT_SECRET=<random string>
+GOOGLE_OAUTH_CLIENT_ID=872418947562-...
+GOOGLE_OAUTH_CLIENT_SECRET=<Google web client secret>
+GOOGLE_OAUTH_REDIRECT_URI=https://abroadly.online/auth/google/callback
 ```
 
 Current state: Groq + Gemini keys are configured and working. Groq is primary LLM (llama-3.3-70b), Gemini 2.0 Flash is fallback when Groq hits rate limits.
+
+Google OAuth client secrets must stay server-side in `/opt/abroadly/.env` and must be passed only to the backend container. Do not use `NEXT_PUBLIC_*` for the client secret.
 
 ## Frontend
 
@@ -98,6 +103,7 @@ Framework: Next.js 14 App Router, React 18, Tailwind CSS 4, Plus Jakarta Sans fo
 | `/` | `page.tsx` | Landing page with hero, how-it-works, topics |
 | `/onboarding` | `onboarding/page.tsx` | Student profile creation form |
 | `/chat` | `chat/page.tsx` | AI chat with document upload panel |
+| `/auth/google/callback` | `auth/google/callback/page.tsx` | Google OAuth callback page; exchanges code through backend |
 | `/admin/login` | `admin/login/page.tsx` | Admin login |
 | `/admin` | `admin/page.tsx` | Admin dashboard with stats |
 | `/admin/students` | `admin/students/page.tsx` | Student list with search, last message preview |
@@ -150,6 +156,8 @@ Framework: FastAPI, SQLAlchemy async, Postgres, Chroma, Groq + Gemini.
 | `GET` | `/chat/history/{student_id}` | none | Chat history for student |
 | `POST` | `/upload` | none | Upload document (PDF, TXT, JPG, PNG) |
 | `GET` | `/health` | none | Health check |
+| `GET` | `/auth/google/login` | none | Redirect student to Google OAuth |
+| `POST` | `/auth/google/exchange` | state cookie | Exchange Google code server-side and return student profile |
 | `POST` | `/admin/login` | none | Admin login, returns JWT |
 | `GET` | `/admin/stats` | JWT | Dashboard stats |
 | `GET` | `/admin/students` | JWT | Paginated student list with search |
@@ -163,6 +171,7 @@ Framework: FastAPI, SQLAlchemy async, Postgres, Chroma, Groq + Gemini.
 ### Key Backend Files
 
 - `backend/app/main.py`: FastAPI app, router registration
+- `backend/app/api/auth.py`: Google OAuth student sign-in; client secret stays backend-only
 - `backend/app/api/chat.py`: chat endpoint with ai_paused check, eval pipeline, audit persistence
 - `backend/app/api/onboarding.py`: student create/upsert (duplicate email returns existing)
 - `backend/app/api/upload.py`: document upload with OCR (tesseract for images), Chroma indexing
@@ -245,6 +254,16 @@ PARTIAL_ANSWER_MIN_SCORE = 0.05    # LLM always called for in-scope queries
 - Password stored as bcrypt hash
 - JWT tokens (24h expiry) via PyJWT
 - All admin endpoints require `Authorization: Bearer <token>` header
+
+### Google Student Sign-In
+
+- Google OAuth is for student sign-in, not admin auth.
+- Browser starts at `/api/auth/google/login`.
+- Google redirects to `https://abroadly.online/auth/google/callback`.
+- The frontend callback page posts the returned `code` and `state` to `/api/auth/google/exchange`.
+- The backend validates the HttpOnly state cookie, exchanges the code with Google, requires a verified email, creates/finds the `students` row by email, and returns the student id.
+- The frontend stores `abroadly_student_id` in localStorage, preserving the existing chat flow.
+- Client secret is never exposed to frontend code.
 
 ### Document Uploads
 
@@ -336,6 +355,7 @@ When Presish asks for deploy/hosting:
 - Production compose: `docker-compose.prod.yml`.
 - Clean orphaned containers before compose up to avoid conflicts.
 - Do not put secrets in git.
+- OAuth secrets go in `/opt/abroadly/.env`; after changing them, rebuild/recreate the backend container.
 
 When Presish asks for knowledge/content:
 

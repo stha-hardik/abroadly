@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     admin_password_hash: str = ""
     jwt_secret: str = "abroadly-jwt-secret-change-in-prod"
 
+    # Google OAuth student sign-in
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+    google_oauth_redirect_uri: str = "https://abroadly.online/auth/google/callback"
+
     # Global AI toggle (runtime, not persisted across restarts)
     ai_globally_paused: bool = False
 

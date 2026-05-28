@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GoogleSignInButton } from "./google-sign-in-button";
 
 const assurances = [
   "Free for students",
@@ -86,6 +87,10 @@ export default function Home() {
               >
                 Create my profile
               </Link>
+              <GoogleSignInButton
+                label="Sign in with Google"
+                className="px-6 py-4 text-base hover:-translate-y-0.5"
+              />
               <Link
                 href="/chat"
                 className="ab-focus rounded-md border border-white/30 bg-white/10 px-6 py-4 text-center text-base font-black text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/18"

@@ -72,6 +72,11 @@ export interface UploadResponse {
   message: string;
 }
 
+export interface GoogleAuthResponse {
+  student: StudentOut;
+  is_new_student: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Error type
 // ---------------------------------------------------------------------------
@@ -144,6 +149,24 @@ export async function getChatHistory(
 ): Promise<ChatTurn[]> {
   return handle<ChatTurn[]>(
     await fetch(`${BASE}/chat/history/${student_id}?limit=${limit}`)
+  );
+}
+
+export function googleLoginUrl(): string {
+  return `${BASE}/auth/google/login`;
+}
+
+export async function exchangeGoogleCode(
+  code: string,
+  state: string
+): Promise<GoogleAuthResponse> {
+  return handle<GoogleAuthResponse>(
+    await fetch(`${BASE}/auth/google/exchange`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, state }),
+    })
   );
 }
 
