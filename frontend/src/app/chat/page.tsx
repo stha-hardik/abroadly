@@ -9,9 +9,12 @@ import {
   getStudent,
   getCurrentStudent,
   getChatHistory,
+  getStudentDocuments,
+  getStudentDocumentDownloadUrl,
   logoutStudent,
   type ChatResponse,
   type ChatSource,
+  type StudentDocument,
   type StudentOut,
 } from "@/lib/api";
 
@@ -327,7 +330,7 @@ function isImageFile(file: File): boolean {
   return file.type.startsWith("image/") || IMAGE_EXTS.some((e) => file.name.toLowerCase().endsWith(e));
 }
 
-function compressImage(file: File): Promise<{ compressed: File; thumbUrl: string }> {
+function compressImage(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -346,21 +349,11 @@ function compressImage(file: File): Promise<{ compressed: File; thumbUrl: string
       if (!ctx) return reject(new Error("Canvas not supported"));
       ctx.drawImage(img, 0, 0, width, height);
 
-      const thumbCanvas = document.createElement("canvas");
-      const thumbSize = 80;
-      const thumbRatio = Math.min(thumbSize / img.width, thumbSize / img.height);
-      thumbCanvas.width = Math.round(img.width * thumbRatio);
-      thumbCanvas.height = Math.round(img.height * thumbRatio);
-      const thumbCtx = thumbCanvas.getContext("2d");
-      if (!thumbCtx) return reject(new Error("Canvas not supported"));
-      thumbCtx.drawImage(img, 0, 0, thumbCanvas.width, thumbCanvas.height);
-      const thumbUrl = thumbCanvas.toDataURL("image/jpeg", 0.6);
-
       canvas.toBlob(
         (blob) => {
           if (!blob) return reject(new Error("Compression failed"));
           const compressed = new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
-          resolve({ compressed, thumbUrl });
+          resolve(compressed);
         },
         "image/jpeg",
         JPEG_QUALITY
@@ -382,54 +375,45 @@ function formatBytes(bytes: number): string {
 
 /* ── Document upload panel ────────────────────────────────────────── */
 
-interface UploadedDoc {
-  docTypeId: string;
-  filename: string;
-  thumbUrl: string | null;
-  originalSize: number;
-  compressedSize: number | null;
-}
-
 function DocumentPanel({
   open,
   onClose,
   studentId,
+  documents,
   onUploadDone,
   onDiscuss,
 }: {
   open: boolean;
   onClose: () => void;
   studentId: string;
-  onUploadDone: (docType: DocType, filename: string) => void;
+  documents: StudentDocument[];
+  onUploadDone: (docType: DocType, filename: string, document: StudentDocument | null) => void;
   onDiscuss: (docType: DocType) => void;
 }) {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [uploaded, setUploaded] = useState<UploadedDoc[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const uploadedByType = useMemo(() => {
+    const byType = new Map<string, StudentDocument>();
+    for (const doc of documents) {
+      if (!byType.has(doc.doc_type)) byType.set(doc.doc_type, doc);
+    }
+    return byType;
+  }, [documents]);
+  const completedTypeCount = docTypes.filter((dt) => uploadedByType.has(dt.id)).length;
 
   const handleFile = useCallback(
     async (docType: DocType, file: File) => {
       setError(null);
       setUploadingId(docType.id);
-      const originalSize = file.size;
       let fileToUpload = file;
-      let thumbUrl: string | null = null;
-      let compressedSize: number | null = null;
       try {
         if (isImageFile(file)) {
-          const result = await compressImage(file);
-          fileToUpload = result.compressed;
-          thumbUrl = result.thumbUrl;
-          compressedSize = result.compressed.size;
+          fileToUpload = await compressImage(file);
         }
-        await uploadFile(studentId, fileToUpload, docType.id);
-        setUploaded((prev) => [
-          ...prev.filter((d) => d.docTypeId !== docType.id),
-          { docTypeId: docType.id, filename: file.name, thumbUrl, originalSize, compressedSize },
-        ]);
-        onUploadDone(docType, file.name);
+        const res = await uploadFile(studentId, fileToUpload, docType.id, file.name);
+        onUploadDone(docType, file.name, res.document);
       } catch (err: unknown) {
         setError(`${docType.label}: ${err instanceof Error ? err.message : "Upload failed"}`);
       } finally {
@@ -475,7 +459,10 @@ function DocumentPanel({
           <div className="space-y-2">
             {docTypes.map((dt) => {
               const isUploading = uploadingId === dt.id;
-              const uploadedDoc = uploaded.find((d) => d.docTypeId === dt.id);
+              const uploadedDoc = uploadedByType.get(dt.id);
+              const thumbUrl = uploadedDoc && uploadedDoc.is_image
+                ? getStudentDocumentDownloadUrl(studentId, uploadedDoc.doc_id)
+                : null;
               const isDragTarget = dragOver === dt.id;
               return (
                 <div
@@ -485,8 +472,8 @@ function DocumentPanel({
                   onDragLeave={() => setDragOver(null)}
                   onDrop={(e) => handleDrop(dt, e)}
                 >
-                  {uploadedDoc?.thumbUrl ? (
-                    <img src={uploadedDoc.thumbUrl} alt={uploadedDoc.filename} className="doc-thumb" />
+                  {uploadedDoc && thumbUrl ? (
+                    <img src={thumbUrl} alt={uploadedDoc.filename} className="doc-thumb" />
                   ) : (
                     <span className="text-xl leading-none shrink-0">{dt.icon}</span>
                   )}
@@ -495,12 +482,9 @@ function DocumentPanel({
                     {uploadedDoc ? (
                       <div>
                         <p className="text-[11px] text-[#6B655C] truncate">{uploadedDoc.filename}</p>
-                        {uploadedDoc.compressedSize !== null && (
-                          <p className="text-[10px] text-emerald-600 mt-0.5">
-                            {formatBytes(uploadedDoc.originalSize)} → {formatBytes(uploadedDoc.compressedSize)}{" "}
-                            <span className="font-semibold">({Math.round((1 - uploadedDoc.compressedSize / uploadedDoc.originalSize) * 100)}% smaller)</span>
-                          </p>
-                        )}
+                        <p className="text-[10px] text-emerald-600 mt-0.5">
+                          {uploadedDoc.ext.replace(".", "").toUpperCase()} {"·"} {formatBytes(uploadedDoc.size_bytes)}
+                        </p>
                       </div>
                     ) : (
                       <p className="text-[11px] text-[#8A847B] truncate">{dt.desc}</p>
@@ -537,9 +521,9 @@ function DocumentPanel({
 
         <div className="doc-panel-footer">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-[#8A847B]">{uploaded.length} of {docTypes.length} uploaded</span>
+            <span className="text-[11px] text-[#8A847B]">{completedTypeCount} of {docTypes.length} categories uploaded</span>
             <div className="h-1.5 w-20 rounded-full bg-[#EFECE4] overflow-hidden">
-              <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${(uploaded.length / docTypes.length) * 100}%` }} />
+              <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${(completedTypeCount / docTypes.length) * 100}%` }} />
             </div>
           </div>
           <button type="button" onClick={onClose} className="ab-focus rounded-lg bg-[#12244a] px-5 py-2.5 text-[12px] font-bold text-white hover:bg-[#1F3D78] transition-colors">Done</button>
@@ -602,7 +586,7 @@ export default function ChatPage() {
   const [thinking, setThinking] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [docPanelOpen, setDocPanelOpen] = useState(false);
-  const [uploadedCount, setUploadedCount] = useState(0);
+  const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [uploadPrompt, setUploadPrompt] = useState<{ label: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -610,6 +594,13 @@ export default function ChatPage() {
 
   const firstName = useMemo(() => (student?.full_name || "").trim().split(/\s+/)[0] || "", [student]);
   const userInitial = (firstName || "Y").charAt(0).toUpperCase();
+  const uploadedCount = documents.length;
+
+  const refreshDocuments = useCallback(async (sid: string) => {
+    if (!sid) return;
+    const docs = await getStudentDocuments(sid);
+    setDocuments(docs);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -637,6 +628,7 @@ export default function ChatPage() {
       }
       if (cancelled) return;
       setStudentId(sid);
+      refreshDocuments(sid).catch(() => {});
       try {
         const turns = await getChatHistory(sid);
         if (cancelled) return;
@@ -658,7 +650,13 @@ export default function ChatPage() {
     }
     restoreSession();
     return () => { cancelled = true; };
-  }, [router]);
+  }, [router, refreshDocuments]);
+
+  useEffect(() => {
+    if (docPanelOpen && studentId) {
+      refreshDocuments(studentId).catch(() => {});
+    }
+  }, [docPanelOpen, studentId, refreshDocuments]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -725,7 +723,13 @@ export default function ChatPage() {
     setMessages((m) => [...m, { role: "upload", status: "uploading", filename: file.name, text: `Uploading ${file.name}` }]);
     setUploading(true);
     try {
-      await uploadFile(studentId, file);
+      const res = await uploadFile(studentId, file);
+      const document = res.document;
+      if (document) {
+        setDocuments((docs) => [document, ...docs.filter((doc) => doc.doc_id !== document.doc_id)]);
+      } else {
+        refreshDocuments(studentId).catch(() => {});
+      }
       setMessages((m) => m.map((msg, i) => (i === m.length - 1 && msg.role === "upload" ? { ...msg, status: "done" as const, text: `Uploaded ${file.name}. I can now reference this document.` } : msg)));
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : "Upload failed.";
@@ -735,10 +739,14 @@ export default function ChatPage() {
     }
   }
 
-  const handleDocUploadDone = useCallback((docType: DocType, filename: string) => {
-    setUploadedCount((c) => c + 1);
+  const handleDocUploadDone = useCallback((docType: DocType, filename: string, document: StudentDocument | null) => {
+    if (document) {
+      setDocuments((docs) => [document, ...docs.filter((doc) => doc.doc_id !== document.doc_id)]);
+    } else if (studentId) {
+      refreshDocuments(studentId).catch(() => {});
+    }
     setMessages((m) => [...m, { role: "upload", status: "done" as const, filename, text: `Uploaded ${docType.label}: ${filename}`, docType: docType.id }]);
-  }, []);
+  }, [refreshDocuments, studentId]);
 
   const hasMessages = messages.length > 0;
 
@@ -1006,6 +1014,7 @@ export default function ChatPage() {
         open={docPanelOpen}
         onClose={() => setDocPanelOpen(false)}
         studentId={studentId}
+        documents={documents}
         onUploadDone={handleDocUploadDone}
         onDiscuss={(dt) => {
           setDocPanelOpen(false);
