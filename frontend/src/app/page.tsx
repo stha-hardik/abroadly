@@ -56,14 +56,14 @@ const topics = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#fbfaf7] text-[#172033]">
+    <main className="min-h-screen overflow-hidden bg-[#F4F2EC] text-[#1B1916]">
       <section className="relative min-h-[92vh] overflow-hidden bg-[#12244a]">
         <div
           className="pointer-events-none absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/images/abroadly-hero.png')" }}
         />
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(18,36,74,0.94)_0%,rgba(18,36,74,0.82)_42%,rgba(18,36,74,0.38)_76%,rgba(18,36,74,0.12)_100%)]" />
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-36 bg-[linear-gradient(180deg,rgba(251,250,247,0)_0%,#fbfaf7_92%)]" />
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-36 bg-[linear-gradient(180deg,rgba(251,250,247,0)_0%,#F4F2EC_92%)]" />
         <div className="absolute inset-x-0 top-0 z-30 border-b border-white/15 bg-[#12244a]/38 backdrop-blur-xl">
           <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
             <Link href="/" className="ab-focus flex items-center gap-3 rounded-md text-white">
@@ -83,7 +83,7 @@ export default function Home() {
             </div>
             <Link
               href="/onboarding"
-              className="ab-focus rounded-md bg-white px-4 py-2 text-sm font-black text-[#12244a] transition hover:bg-[#8fe6c4]"
+              className="ab-focus rounded-md bg-white px-4 py-2 text-sm font-black text-[#12244a] transition hover:bg-[#7DDBB1]"
             >
               Start free
             </Link>
@@ -93,10 +93,10 @@ export default function Home() {
         <div className="relative z-10 mx-auto flex min-h-[92vh] max-w-7xl items-center px-5 pb-24 pt-28 sm:px-8 lg:pt-32">
           <div className="max-w-4xl text-white">
             <div className="mb-5 inline-flex items-center gap-2 rounded-md border border-white/25 bg-white/10 px-3 py-2 text-sm font-black text-white backdrop-blur">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#8fe6c4]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#7DDBB1]" />
               A free study-abroad assistant for students in Nepal
             </div>
-            <h1 className="max-w-3xl text-5xl font-black leading-[1.02] sm:text-6xl lg:text-7xl">
+            <h1 className="max-w-3xl text-5xl font-bold leading-[1.02] tracking-[-0.025em] sm:text-6xl lg:text-7xl">
               Ask Abroadly before you guess your next move.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/86 sm:text-xl">
@@ -140,27 +140,27 @@ export default function Home() {
         {steps.map((step, index) => (
           <article
             key={step.title}
-            className="rounded-lg border border-[#d7dfea] bg-white p-6 shadow-[0_18px_50px_rgba(20,35,62,0.08)]"
+            className="rounded-lg border border-[#E8E5DD] bg-white p-6 shadow-[0_4px_12px_rgba(15,15,15,0.06),0_1px_3px_rgba(15,15,15,0.04)]"
           >
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-[#e9f7f1] text-sm font-black text-[#087a4d]">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-[#E8F2EC] text-sm font-black text-[#0A6E45]">
               0{index + 1}
             </span>
             <h2 className="mt-5 text-xl font-black">{step.title}</h2>
-            <p className="mt-3 text-sm leading-7 text-[#596579]">{step.body}</p>
+            <p className="mt-3 text-sm leading-7 text-[#6B655C]">{step.body}</p>
           </article>
         ))}
       </section>
 
-      <section id="student-problems" className="border-y border-[#d7dfea] bg-[#eef6ff]">
+      <section id="student-problems" className="border-y border-[#E8E5DD] bg-[#EEF1FA]">
         <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
           <div>
-            <p className="text-sm font-black uppercase text-[#2854b8]">
+            <p className="text-sm font-black uppercase text-[#365CC4]">
               For the questions students actually ask
             </p>
             <h2 className="mt-3 max-w-3xl text-3xl font-black leading-tight sm:text-4xl">
               When the internet gives you ten answers, Abroadly helps you sort the next one.
             </h2>
-            <p className="mt-5 max-w-2xl text-base leading-8 text-[#596579]">
+            <p className="mt-5 max-w-2xl text-base leading-8 text-[#6B655C]">
               Use it before you pay an application fee, choose a country, write an SOP,
               prepare documents, or tell your family a plan you are not sure about yet.
             </p>
@@ -168,9 +168,9 @@ export default function Home() {
 
           <div className="mt-9 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {studentProblems.map((item) => (
-              <article key={item.title} className="rounded-lg border border-[#d7dfea] bg-white p-5 shadow-sm">
+              <article key={item.title} className="rounded-lg border border-[#E8E5DD] bg-white p-5 shadow-sm">
                 <h3 className="text-lg font-black">{item.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-[#596579]">{item.body}</p>
+                <p className="mt-3 text-sm leading-7 text-[#6B655C]">{item.body}</p>
               </article>
             ))}
           </div>
@@ -179,13 +179,13 @@ export default function Home() {
 
       <section id="topics" className="mx-auto grid max-w-7xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
         <div>
-          <p className="text-sm font-black uppercase text-[#ff7a59]">
+          <p className="text-sm font-black uppercase text-[#E86A4D]">
             Ask in plain language
           </p>
           <h2 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">
             You can start with a confused question.
           </h2>
-          <p className="mt-5 max-w-xl text-base leading-8 text-[#596579]">
+          <p className="mt-5 max-w-xl text-base leading-8 text-[#6B655C]">
             Abroadly is made for the first draft of your thinking: half-formed plans,
             family pressure, country comparisons, and “what does this requirement mean?”
           </p>
@@ -195,7 +195,7 @@ export default function Home() {
           {topics.map((topic) => (
             <div
               key={topic}
-              className="rounded-md border border-[#d7dfea] bg-white px-4 py-5 text-sm font-black text-[#172033] shadow-sm"
+              className="rounded-md border border-[#E8E5DD] bg-white px-4 py-5 text-sm font-black text-[#1B1916] shadow-sm"
             >
               {topic}
             </div>
@@ -205,7 +205,7 @@ export default function Home() {
 
       <section className="mx-auto flex max-w-7xl flex-col gap-6 px-5 pb-16 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm font-black uppercase text-[#087a4d]">
+          <p className="text-sm font-black uppercase text-[#0A6E45]">
             Free, honest, and ready when you are
           </p>
           <h2 className="mt-2 max-w-2xl text-3xl font-black leading-tight">
@@ -214,7 +214,7 @@ export default function Home() {
         </div>
         <Link
           href="/onboarding"
-          className="ab-focus rounded-md bg-[#12244a] px-6 py-4 text-center font-black text-white shadow-[0_14px_32px_rgba(18,36,74,0.2)] transition hover:-translate-y-0.5 hover:bg-[#1d376c]"
+          className="ab-focus rounded-md bg-[#12244a] px-6 py-4 text-center font-bold text-white shadow-[0_4px_12px_rgba(15,15,15,0.06),0_1px_3px_rgba(15,15,15,0.04)] transition hover:-translate-y-0.5 hover:bg-[#1F3D78]"
         >
           Start free with Google
         </Link>

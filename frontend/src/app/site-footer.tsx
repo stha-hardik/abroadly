@@ -8,17 +8,17 @@ import Link from "next/link";
 export function SiteFooter() {
   const year = new Date().getFullYear();
   return (
-    <footer className="border-t border-[#e4e8f0] bg-[#f6f8fb] text-[#7a8495]">
+    <footer className="border-t border-[#EFECE4] bg-[#FAF9F6] text-[#8A847B]">
       <div className="mx-auto flex max-w-7xl flex-col items-start gap-2 px-5 py-4 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <p>© {year} Abroadly · Free study-abroad guidance for Nepali students.</p>
         <nav className="flex items-center gap-4">
-          <Link href="/privacy" className="ab-focus rounded-md transition hover:text-[#172033]">
+          <Link href="/privacy" className="ab-focus rounded-md transition hover:text-[#1B1916]">
             Privacy
           </Link>
-          <Link href="/terms" className="ab-focus rounded-md transition hover:text-[#172033]">
+          <Link href="/terms" className="ab-focus rounded-md transition hover:text-[#1B1916]">
             Terms
           </Link>
-          <Link href="/" className="ab-focus rounded-md transition hover:text-[#172033]">
+          <Link href="/" className="ab-focus rounded-md transition hover:text-[#1B1916]">
             Home
           </Link>
         </nav>
