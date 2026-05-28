@@ -43,7 +43,7 @@ export default function Home() {
         <div className="absolute inset-x-0 top-0 z-10 border-b border-white/15 bg-[#21143d]/35 backdrop-blur-xl">
           <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
             <Link href="/" className="ab-focus flex items-center gap-3 rounded-md text-white">
-              <img src="/images/abroadly-logo.svg" alt="Abroadly" className="h-9 w-9 rounded-md" />
+              <img src="/images/abroadly-logo.png" alt="Abroadly" className="h-9 w-9 rounded-md" />
               <span className="text-lg font-black">Abroadly</span>
             </Link>
             <div className="hidden items-center gap-7 text-sm font-semibold text-white/80 md:flex">

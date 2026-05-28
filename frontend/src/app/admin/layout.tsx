@@ -35,7 +35,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="hidden lg:flex w-56 shrink-0 flex-col bg-[#0f0b1a] p-4">
         <Link href="/admin" className="flex items-center gap-2.5 px-2 mb-6">
           <div className="h-8 w-8 shrink-0 rounded-lg overflow-hidden">
-            <img src="/images/abroadly-logo.svg" alt="Ab" className="h-full w-full object-cover" />
+            <img src="/images/abroadly-logo.png" alt="Ab" className="h-full w-full object-cover" />
           </div>
           <span className="text-[13px] font-bold text-white">Admin</span>
         </Link>

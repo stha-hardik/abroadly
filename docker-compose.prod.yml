@@ -21,14 +21,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # env_file loads .env values literally (no ${} interpolation), so secrets
+    # containing $ (e.g. bcrypt hashes) survive intact. The environment block
+    # below only sets derived/constructed values.
+    env_file:
+      - .env
     environment:
       POSTGRES_URL: postgresql+asyncpg://abroadly:${DB_PASSWORD:-abroadly}@db:5432/abroadly
       CORS_ORIGINS: ${CORS_ORIGINS:-https://abroadly.online,http://abroadly.online}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
-      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
-      GOOGLE_OAUTH_REDIRECT_URI: ${GOOGLE_OAUTH_REDIRECT_URI:-https://abroadly.online/auth/google/callback}
       APP_ENV: production
     volumes:
       # Persist Chroma + uploads across container recreates. Without these,
