@@ -288,47 +288,33 @@ function FormattedBody({ text }: { text: string }) {
 }
 
 /* ── AI bubble ────────────────────────────────────────────────────── */
+/* Follow-up suggestions are surfaced in the rail above the composer, and
+ * upload prompts via a popup — so the bubble itself stays clean. */
 
-function AiResponseBubble({
-  response,
-  onAction,
-  onUploadClick,
-}: {
-  response: ChatResponse;
-  onAction: (text: string) => void;
-  onUploadClick: () => void;
-}) {
+function AiResponseBubble({ response }: { response: ChatResponse }) {
   const answer = response.answer ?? response.clarifying_question ?? "I need a little more context.";
-  const { body, actions } = parseAnswer(answer);
-
+  const { body } = parseAnswer(answer);
   return (
     <div className="chat-bubble-ai">
       <FormattedBody text={body} />
-      {actions.length > 0 && (
-        <div className="mt-3 flex flex-col gap-1.5 border-t border-[#EFECE4] pt-3">
-          {actions.map((action, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => (action.isUpload ? onUploadClick() : onAction(action.text))}
-              className={`chat-action-chip group ${action.isUpload ? "chat-action-chip-upload" : ""}`}
-            >
-              {action.isUpload ? (
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-[#0A6E45]" fill="none">
-                  <path d="M8 11V5m0 0L5.5 7.5M8 5l2.5 2.5M3 13h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-[#8A847B] group-hover:text-[#0A6E45]" fill="none">
-                  <path d="M5 8h6M8 5v6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
-              )}
-              <span className={action.isUpload ? "text-[#0A6E45] font-semibold" : ""}>{action.text}</span>
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
+}
+
+/* True when an AI answer is nudging the student to upload a document. */
+function answerWantsUpload(response: ChatResponse): boolean {
+  const answer = response.answer ?? response.clarifying_question ?? "";
+  return parseAnswer(answer).actions.some((a) => a.isUpload);
+}
+
+function inferUploadLabel(response: ChatResponse): string {
+  const answer = (response.answer ?? response.clarifying_question ?? "").toLowerCase();
+  if (/transcript|marksheet|grade/.test(answer)) return "transcript / marksheet";
+  if (/ielts|pte|toefl|english/.test(answer)) return "English test score";
+  if (/passport/.test(answer)) return "passport";
+  if (/bank|financ|sponsor|fund/.test(answer)) return "financial documents";
+  if (/sop|statement of purpose/.test(answer)) return "SOP draft";
+  return "documents";
 }
 
 /* ── Image compression ────────────────────────────────────────────── */
@@ -409,11 +395,13 @@ function DocumentPanel({
   onClose,
   studentId,
   onUploadDone,
+  onDiscuss,
 }: {
   open: boolean;
   onClose: () => void;
   studentId: string;
   onUploadDone: (docType: DocType, filename: string) => void;
+  onDiscuss: (docType: DocType) => void;
 }) {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<UploadedDoc[]>([]);
@@ -436,7 +424,7 @@ function DocumentPanel({
           thumbUrl = result.thumbUrl;
           compressedSize = result.compressed.size;
         }
-        await uploadFile(studentId, fileToUpload);
+        await uploadFile(studentId, fileToUpload, docType.id);
         setUploaded((prev) => [
           ...prev.filter((d) => d.docTypeId !== docType.id),
           { docTypeId: docType.id, filename: file.name, thumbUrl, originalSize, compressedSize },
@@ -520,7 +508,7 @@ function DocumentPanel({
                   </div>
                   {uploadedDoc ? (
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-emerald-600"><CheckCircleIcon /></span>
+                      <button type="button" onClick={() => onDiscuss(dt)} className="rounded-lg bg-[#E8F2EC] px-2.5 py-1.5 text-[11px] font-bold text-[#0A6E45] hover:bg-[#d8ebe0] transition-colors">Ask AI</button>
                       <button type="button" onClick={() => fileRefs.current[dt.id]?.click()} className="text-[11px] font-semibold text-[#8A847B] hover:text-[#0A6E45] transition-colors">Replace</button>
                     </div>
                   ) : isUploading ? (
@@ -561,6 +549,48 @@ function DocumentPanel({
   );
 }
 
+/* ── Upload prompt popup ──────────────────────────────────────────── */
+
+function UploadPromptModal({
+  label,
+  onUpload,
+  onClose,
+}: {
+  label: string;
+  onUpload: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div className="upload-modal-overlay" onClick={onClose} />
+      <div className="upload-modal" role="dialog" aria-modal="true">
+        <button type="button" onClick={onClose} aria-label="Close" className="ab-focus absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-lg text-[#8A847B] hover:bg-[#F0EDE4] transition-colors">
+          <CloseIcon />
+        </button>
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E8F2EC] text-[#0A6E45]">
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
+            <path d="M12 16V8m0 0-3.5 3.5M12 8l3.5 3.5M5 19h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <h3 className="mt-4 text-[17px] font-extrabold tracking-[-0.01em] text-[var(--ab-ink)]">
+          Share your {label} for a sharper answer
+        </h3>
+        <p className="mt-2 text-[13.5px] leading-6 text-[#6B655C]">
+          Upload it and I&apos;ll tailor my guidance to your real situation. It stays private to your account.
+        </p>
+        <div className="mt-5 flex gap-2.5">
+          <button type="button" onClick={onUpload} className="ab-focus flex-1 rounded-xl bg-[#0A6E45] px-4 py-3 text-[13px] font-bold text-white shadow-[var(--shadow-sm)] transition hover:bg-[#095C3A]">
+            Upload now
+          </button>
+          <button type="button" onClick={onClose} className="ab-focus rounded-xl border border-[#E8E5DD] bg-white px-4 py-3 text-[13px] font-semibold text-[#6B655C] transition hover:bg-[#F4F2EC]">
+            Maybe later
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── Main page ────────────────────────────────────────────────────── */
 
 export default function ChatPage() {
@@ -573,6 +603,7 @@ export default function ChatPage() {
   const [uploading, setUploading] = useState(false);
   const [docPanelOpen, setDocPanelOpen] = useState(false);
   const [uploadedCount, setUploadedCount] = useState(0);
+  const [uploadPrompt, setUploadPrompt] = useState<{ label: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -657,6 +688,10 @@ export default function ChatPage() {
     try {
       const res = await chat(studentId, text);
       setMessages((m) => [...m, { role: "ai", response: res }]);
+      // When the AI nudges an upload, surface a clean popup (once, not while panel open).
+      if (answerWantsUpload(res) && !docPanelOpen) {
+        setUploadPrompt({ label: inferUploadLabel(res) });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error contacting server.";
       setMessages((m) => [
@@ -901,7 +936,7 @@ export default function ChatPage() {
                 return (
                   <div key={i} className="chat-row chat-row-ai" style={{ animationDelay: "0.04s" }}>
                     <AiAvatar />
-                    <AiResponseBubble response={msg.response} onAction={(t) => sendMessage(t)} onUploadClick={() => setDocPanelOpen(true)} />
+                    <AiResponseBubble response={msg.response} />
                   </div>
                 );
               })}
@@ -967,7 +1002,24 @@ export default function ChatPage() {
         </footer>
       </section>
 
-      <DocumentPanel open={docPanelOpen} onClose={() => setDocPanelOpen(false)} studentId={studentId} onUploadDone={handleDocUploadDone} />
+      <DocumentPanel
+        open={docPanelOpen}
+        onClose={() => setDocPanelOpen(false)}
+        studentId={studentId}
+        onUploadDone={handleDocUploadDone}
+        onDiscuss={(dt) => {
+          setDocPanelOpen(false);
+          sendMessage(`I just uploaded my ${dt.label}. Please review it — what stands out, and what should I improve or double-check?`);
+        }}
+      />
+
+      {uploadPrompt && (
+        <UploadPromptModal
+          label={uploadPrompt.label}
+          onUpload={() => { setUploadPrompt(null); setDocPanelOpen(true); }}
+          onClose={() => setUploadPrompt(null)}
+        />
+      )}
     </main>
   );
 }

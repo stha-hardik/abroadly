@@ -45,14 +45,46 @@ def _extract_text_image(data: bytes) -> str:
         raise HTTPException(status_code=422, detail=f"Image OCR error: {exc}") from exc
 
 
+def _ocr_pdf(data: bytes) -> str:
+    """OCR a scanned PDF (no embedded text) by rasterising pages with PyMuPDF
+    and running tesseract on each. Open-source, no paid API. Best-effort:
+    returns '' if PyMuPDF/tesseract are unavailable rather than raising."""
+    try:
+        import fitz  # PyMuPDF
+        import pytesseract
+        from PIL import Image
+    except Exception:
+        return ""
+    out: list[str] = []
+    try:
+        doc = fitz.open(stream=data, filetype="pdf")
+        # Cap pages so a huge scan can't hang the request.
+        for page in doc[:15]:
+            pix = page.get_pixmap(dpi=200)
+            img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+            out.append(pytesseract.image_to_string(img))
+        doc.close()
+    except Exception:
+        return "\n".join(out)
+    return "\n".join(out)
+
+
 def _extract_text_pdf(data: bytes) -> str:
     try:
         from pypdf import PdfReader
         reader = PdfReader(io.BytesIO(data))
         pages = [p.extract_text() or "" for p in reader.pages]
-        return "\n".join(pages)
+        text = "\n".join(pages)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"PDF parse error: {exc}") from exc
+
+    # Scanned PDFs have no text layer — pypdf returns near-nothing. Fall back
+    # to open-source OCR (PyMuPDF rasterise + tesseract).
+    if len(text.strip()) < 20:
+        ocr_text = _ocr_pdf(data)
+        if len(ocr_text.strip()) > len(text.strip()):
+            return ocr_text
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +128,7 @@ def _embed(text: str) -> list[float]:
 async def upload(
     student_id: str = Form(...),
     file: UploadFile = File(...),
+    doc_type: str = Form("other"),
 ) -> UploadResponse:
     """Accept transcript / certificate / results doc. PDF or TXT.
 
@@ -158,6 +191,7 @@ async def upload(
             "doc_id": doc_id,
             "source_type": "student",
             "title": filename,
+            "doc_type": doc_type or "other",
         })
 
     collection.upsert(
