@@ -14,6 +14,10 @@ from app.core.config import settings
 MAX_TOKENS = 1000
 TEMPERATURE = 0.4
 
+# Generation models, tried in order — newest flash first, graceful fallback to
+# known-good IDs if a newer one isn't available on this key/region.
+GEMINI_MODELS = ["gemini-3.5-flash", "gemini-2.5-flash"]
+
 # Conversation history is a list of {"role": "user"|"assistant", "content": str}.
 ChatHistory = list[dict]
 
@@ -150,16 +154,28 @@ class GroqGeminiLLM:
             parts=[genai.types.Part(text=self._user_payload(profile, context, query))],
         ))
 
-        response = await client.aio.models.generate_content(
-            model="gemini-2.5-pro",
-            contents=contents,
-            config=genai.types.GenerateContentConfig(
-                system_instruction=self._system_with_mode(system, mode),
-                temperature=TEMPERATURE,
-                max_output_tokens=MAX_TOKENS,
-            ),
+        config = genai.types.GenerateContentConfig(
+            system_instruction=self._system_with_mode(system, mode),
+            temperature=TEMPERATURE,
+            max_output_tokens=MAX_TOKENS,
         )
-        return response.text.strip()
+        # Prefer the newest flash; fall back to known-good IDs if a newer one
+        # isn't available on this API key/region.
+        last_err: Exception | None = None
+        for model in GEMINI_MODELS:
+            try:
+                response = await client.aio.models.generate_content(
+                    model=model, contents=contents, config=config,
+                )
+                text = (response.text or "").strip()
+                if text:
+                    return text
+            except Exception as e:
+                last_err = e
+                continue
+        if last_err:
+            raise last_err
+        raise RuntimeError("All Gemini models returned empty")
 
     async def normalize(self, system: str, query: str) -> str:
         if not settings.gemini_api_key:
