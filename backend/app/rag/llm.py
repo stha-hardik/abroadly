@@ -39,7 +39,8 @@ NORMALIZER_MODEL = "gemini-2.0-flash"  # Flash variant — fast, cheap, multilin
 
 
 class GroqGeminiLLM:
-    """Groq llama-3.3-70b primary; Gemini flash fallback."""
+    """Gemini 2.0 Flash primary (stronger context/instruction following);
+    Groq llama-3.3-70b fallback when Gemini is unavailable or rate-limited."""
 
     async def generate(
         self,
@@ -53,16 +54,16 @@ class GroqGeminiLLM:
         import logging
         log = logging.getLogger("abroadly.llm")
 
-        if settings.groq_api_key:
-            try:
-                return await self._groq(system, context, profile, query, history or [], mode)
-            except Exception as e:
-                log.error("Groq failed: %s: %s", type(e).__name__, e)
         if settings.gemini_api_key:
             try:
                 return await self._gemini(system, context, profile, query, history or [], mode)
             except Exception as e:
                 log.error("Gemini failed: %s: %s", type(e).__name__, e)
+        if settings.groq_api_key:
+            try:
+                return await self._groq(system, context, profile, query, history or [], mode)
+            except Exception as e:
+                log.error("Groq failed: %s: %s", type(e).__name__, e)
         return "Sorry, I'm having trouble connecting right now. Please try again in a moment."
 
     @staticmethod
