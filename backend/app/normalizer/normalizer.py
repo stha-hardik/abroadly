@@ -10,6 +10,7 @@ translation than serve a 500.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Protocol
 
@@ -18,6 +19,33 @@ from app.normalizer.types import NormalizationResult
 from app.rag.llm import default_llm
 
 _PROMPT_PATH = Path(__file__).parent / "prompt.md"
+
+# Fast-path: skip the LLM normalize round-trip when the query is already plain
+# English (saves ~1s/reply). Romanized-Nepali/Hinglish still goes through the LLM.
+_EN_STOPWORDS = {
+    "the", "what", "how", "do", "does", "i", "you", "is", "are", "a", "an", "for",
+    "need", "can", "my", "to", "in", "of", "and", "with", "should", "which", "when",
+    "where", "tell", "me", "about", "study", "visa", "university", "cost", "want",
+    "after", "before", "get", "there", "best", "good", "help",
+    "hello", "hi", "hey", "thanks", "yes", "ok", "okay", "namaste",
+}
+_NEPALI_MARKERS = {
+    "cha", "chha", "chaina", "ma", "ko", "le", "lai", "garne", "garna", "kun",
+    "mero", "hamro", "painxa", "paincha", "painxa", "huncha", "hunxa", "hunchha",
+    "kasari", "bhayo", "xa", "thiyo", "mildena", "milxa", "leko", "sodhe", "ho",
+    "hola", "aba", "kati", "kaha", "ramro", "padhna", "padna", "jane", "bidesh",
+    "wala", "tyo", "yo", "malai", "timi", "tapai",
+}
+
+
+def _looks_english(text: str) -> bool:
+    toks = re.findall(r"[a-z']+", text.lower())
+    if not toks:
+        return False
+    if any(t in _NEPALI_MARKERS for t in toks):
+        return False
+    en = sum(1 for t in toks if t in _EN_STOPWORDS)
+    return en >= 2 or (len(toks) <= 4 and en >= 1)
 
 
 def _load_system_prompt() -> str:
@@ -46,6 +74,10 @@ class LLMNormalizer:
         original = query.strip()
         if not original:
             return NormalizationResult(original=query, normalized=query, was_changed=False, source="fallback")
+
+        # Fast-path: already-English queries don't need the LLM round-trip.
+        if _looks_english(original):
+            return NormalizationResult(original=original, normalized=original, was_changed=False, source="english")
 
         # Cache hit — skip the LLM call entirely
         cached = cache.get(original)
