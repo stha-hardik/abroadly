@@ -272,9 +272,21 @@ async def chat_endpoint(
         return await _finalize(ChatResponse(**base, answer=answer, sources=sources))
 
     if decision.decision == Decision.LOW_CONFIDENCE:
-        # Partial-answer path: retrieval is thin but plausible — give a gap-honest
-        # answer pointing at the authoritative source, rather than a bare clarifier.
-        if decision.debug.get("partial_answer"):
+        # In-scope but thin retrieval. Rather than dead-ending on a hardcoded
+        # clarifier (which ignores the conversation), let the LLM answer in
+        # gap-honest "partial" mode whenever we have ANYTHING to work with:
+        #   - thin-but-plausible retrieval (the original partial path), OR
+        #   - an ongoing conversation (short follow-ups like "masters" / "yes"
+        #     that only make sense with history), OR
+        #   - the query carries real intent (more than a couple of words).
+        #
+        # The partial-mode system prompt is gap-honest and asks a sharp
+        # clarifying question itself when it genuinely needs one — far smarter
+        # than a canned template. Hard refusals (OUT_OF_SCOPE / ESCALATE) are
+        # handled below and are unaffected.
+        has_history = len(history) > 0
+        has_intent = len(query.split()) >= 3
+        if decision.debug.get("partial_answer") or has_history or has_intent:
             answer = await generate_answer(
                 query=query,
                 retrieved=retrieved,
@@ -283,7 +295,7 @@ async def chat_endpoint(
                 mode="partial",
             )
             return await _finalize(ChatResponse(**base, answer=answer, sources=sources))
-        # Otherwise: pure clarifier, no generation.
+        # Truly cold, contextless one-word opener — a sharp clarifier is best.
         return await _finalize(
             ChatResponse(
                 **base,
