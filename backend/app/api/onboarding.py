@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +14,10 @@ from app.core.email import send_welcome_email
 from app.models.student import StudentCreate, StudentModel, StudentOut, StudentUpdate
 
 router = APIRouter()
+
+
+class CallRequest(BaseModel):
+    phone: str | None = None
 
 
 def _to_out(model: StudentModel) -> StudentOut:
@@ -69,6 +74,33 @@ async def create_student(
         full_name=student.full_name or "",
     )
 
+    return _to_out(student)
+
+
+@router.post("/{student_id}/request-call", response_model=StudentOut)
+async def request_call(
+    student_id: str,
+    payload: CallRequest,
+    db: AsyncSession = Depends(get_session),
+) -> StudentOut:
+    """Student grants consent for an Abroadly counselor to call them.
+    Records consent (and phone if newly provided). AI keeps answering."""
+    try:
+        sid = uuid.UUID(student_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="invalid_student_id")
+
+    result = await db.execute(select(StudentModel).where(StudentModel.id == sid))
+    student = result.scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="student_not_found")
+
+    student.call_consent = True
+    if payload.phone and not student.phone:
+        student.phone = payload.phone
+    student.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(student)
     return _to_out(student)
 
 

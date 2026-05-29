@@ -207,12 +207,12 @@ body {
   max-width: 520px;
   padding: 12px 18px;
   border-radius: 20px 20px 4px 20px;
-  background: var(--ab-ink);
+  background: #E11D2A;
   color: white;
   font-weight: 500;
   box-shadow:
-    0 1px 3px rgba(33, 20, 61, 0.08),
-    0 8px 24px rgba(33, 20, 61, 0.06);
+    0 1px 3px rgba(225, 29, 42, 0.12),
+    0 8px 24px rgba(225, 29, 42, 0.14);
 }
 
 .chat-bubble-ai {
@@ -252,14 +252,14 @@ body {
   cursor: pointer;
 }
 .chat-action-chip:hover {
-  background: #F2FBF6;
-  border-color: rgba(10, 110, 69, 0.25);
+  background: #FDECEE;
+  border-color: rgba(225, 29, 42, 0.25);
   color: var(--ab-ink);
   transform: translateX(2px);
 }
 .chat-action-chip-upload {
-  background: #F2FBF6;
-  border-color: rgba(10, 110, 69, 0.18);
+  background: #FDECEE;
+  border-color: rgba(225, 29, 42, 0.18);
 }
 
 /* ── Source chips ───────────────────────────────────────────────────── */
@@ -375,10 +375,10 @@ body {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .chat-input-wrap:focus-within {
-  border-color: rgba(10, 110, 69, 0.30);
+  border-color: rgba(225, 29, 42, 0.30);
   box-shadow:
-    0 0 0 3px rgba(125, 219, 177, 0.18),
-    0 8px 32px rgba(10, 110, 69, 0.05);
+    0 0 0 3px rgba(225, 29, 42, 0.12),
+    0 8px 32px rgba(225, 29, 42, 0.05);
 }
 
 .chat-input {
@@ -410,7 +410,7 @@ body {
 }
 .chat-action-btn:hover {
   background: #F0EDE4;
-  color: #0A6E45;
+  color: #E11D2A;
 }
 .chat-action-btn:disabled {
   opacity: 0.35;
@@ -424,17 +424,17 @@ body {
   width: 36px;
   height: 36px;
   border-radius: 11px;
-  background: #0A6E45;
+  background: #E11D2A;
   color: white;
   transition: all 0.15s ease;
-  box-shadow: 0 2px 8px rgba(10, 110, 69, 0.28);
+  box-shadow: 0 2px 8px rgba(225, 29, 42, 0.30);
 }
 .chat-send-btn:hover:not(:disabled) {
-  background: #095C3A;
+  background: #C0121F;
   transform: translateY(-1px);
 }
 .chat-send-btn:disabled {
-  background: #D8E5DE;
+  background: #F1C9CD;
   box-shadow: none;
   cursor: not-allowed;
 }
@@ -475,7 +475,7 @@ body {
   transition: all 0.18s ease;
 }
 .chat-launcher-card:hover {
-  border-color: rgba(10, 110, 69, 0.25);
+  border-color: rgba(225, 29, 42, 0.25);
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
@@ -491,7 +491,7 @@ body {
   font-size: 18px;
 }
 .chat-launcher-card:hover .chat-launcher-icon {
-  background: #E8F2EC;
+  background: #FDECEE;
 }
 .chat-launcher-arrow {
   margin-left: auto;
@@ -506,8 +506,8 @@ body {
   transition: all 0.18s ease;
 }
 .chat-launcher-card:hover .chat-launcher-arrow {
-  color: #0A6E45;
-  background: #E8F2EC;
+  color: #E11D2A;
+  background: #FDECEE;
   transform: rotate(45deg);
 }
 
@@ -523,7 +523,7 @@ body {
   transition: all 0.18s ease;
 }
 .chat-upload-nudge:hover {
-  border-color: rgba(10, 110, 69, 0.4);
+  border-color: rgba(225, 29, 42, 0.4);
   background: #FCFCFA;
   box-shadow: var(--shadow-sm);
 }
@@ -559,13 +559,13 @@ body {
   transition: all 0.15s ease;
 }
 .chat-suggestion-chip:hover {
-  border-color: rgba(10, 110, 69, 0.3);
-  background: #F2FBF6;
-  color: #0A6E45;
+  border-color: rgba(225, 29, 42, 0.3);
+  background: #FDECEE;
+  color: #E11D2A;
   transform: translateY(-1px);
 }
 .chat-suggestion-chip svg { color: #B0AA9E; }
-.chat-suggestion-chip:hover svg { color: #0A6E45; }
+.chat-suggestion-chip:hover svg { color: #E11D2A; }
 
 /* ── Upload prompt modal ───────────────────────────────────────────── */
 
@@ -596,6 +596,41 @@ body {
 @keyframes abModalPop {
   from { opacity: 0; transform: translate(-50%, -46%) scale(0.96); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ── Counselor card (in-chat) ──────────────────────────────────────── */
+
+.counselor-card {
+  max-width: 420px;
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 20px 20px 20px 4px;
+  background: #fff;
+  border: 1px solid #F7D4D8;
+  box-shadow:
+    0 1px 2px rgba(225, 29, 42, 0.04),
+    0 8px 24px rgba(225, 29, 42, 0.06);
+}
+
+.counselor-call-btn {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: 12px;
+  background: #E11D2A;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(225, 29, 42, 0.28);
+  transition: all 0.15s ease;
+}
+.counselor-call-btn:hover {
+  background: #C0121F;
+  transform: translateY(-1px);
 }
 
 /* ── Document panel ────────────────────────────────────────────────── */

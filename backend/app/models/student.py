@@ -37,6 +37,7 @@ class StudentModel(Base):
     goals = Column(Text, nullable=True)
     ai_paused = Column(Boolean, default=False, server_default="false")
     profile_completed = Column(Boolean, default=True, server_default="true")
+    call_consent = Column(Boolean, default=False, server_default="false")
     created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
     updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
 
@@ -94,6 +95,7 @@ class StudentOut(StudentBase):
     id: str
     ai_paused: bool = False
     profile_completed: bool = True
+    call_consent: bool = False
     created_at: datetime
     updated_at: datetime
 

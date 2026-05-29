@@ -212,6 +212,16 @@ export default function StudentDetailPage() {
             </button>
           </div>
 
+          {student.call_consent && (
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
+              <span className="text-base">{"\u{1F4DE}"}</span>
+              <div>
+                <p className="text-[11px] font-bold text-red-700">Requested a call</p>
+                <p className="text-[10px] text-red-500">{student.phone || "No phone on file — ask in chat"}</p>
+              </div>
+            </div>
+          )}
+
           {/* Key profile fields (compact) */}
           <div className="mt-4 space-y-2">
             {profileFields.map(({ label, value, icon }) =>
