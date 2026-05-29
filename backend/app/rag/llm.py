@@ -14,9 +14,10 @@ from app.core.config import settings
 MAX_TOKENS = 1000
 TEMPERATURE = 0.4
 
-# Generation models, tried in order — newest flash first, graceful fallback to
-# known-good IDs if a newer one isn't available on this key/region.
-GEMINI_MODELS = ["gemini-3.5-flash", "gemini-2.5-flash"]
+# Generation models, tried in order. gemini-2.5-flash is ~2s/reply; the
+# 3.5-flash preview measured 20-40s on this key, so it's intentionally NOT
+# used — speed matters far more for chat. Revisit if 3.5-flash gets faster.
+GEMINI_MODELS = ["gemini-2.5-flash"]
 
 # Conversation history is a list of {"role": "user"|"assistant", "content": str}.
 ChatHistory = list[dict]
@@ -154,10 +155,14 @@ class GroqGeminiLLM:
             parts=[genai.types.Part(text=self._user_payload(profile, context, query))],
         ))
 
+        # Disable the model's "thinking" phase — the biggest latency lever on
+        # 2.5/3.x flash. If a model rejects it, the GEMINI_MODELS loop falls
+        # through to the next model (and ultimately Groq).
         config = genai.types.GenerateContentConfig(
             system_instruction=self._system_with_mode(system, mode),
             temperature=TEMPERATURE,
             max_output_tokens=MAX_TOKENS,
+            thinking_config=genai.types.ThinkingConfig(thinking_budget=0),
         )
         # Prefer the newest flash; fall back to known-good IDs if a newer one
         # isn't available on this API key/region.
