@@ -22,9 +22,33 @@ def _load_system_prompt() -> str:
         return "You are Abroadly, a free opensource study-abroad guidance assistant."
 
 
+_JUNK_RE = re.compile(r"(?i)^([a-z])\1+$")  # "iii", "aaa", repeated single letter
+
+
+def _is_junk(value: str) -> bool:
+    s = value.strip()
+    if len(s) < 2:
+        return True
+    if _JUNK_RE.fullmatch(s):
+        return True
+    # all-consonant or vowel-less short blobs like "Iii"/"xyz" with no real content
+    if len(s) <= 4 and not re.search(r"[aeiouAEIOU]", s) and s.isalpha():
+        return True
+    return False
+
+
 def _format_profile(student: dict) -> str:
-    parts = [f"{k}: {v}" for k, v in student.items() if v]
-    return "\n".join(parts) or "No profile data provided."
+    """Render only real, meaningful profile fields. Junk/placeholder string
+    values (e.g. "Iii") are dropped so the model never echoes them."""
+    skip = {"id"}
+    parts = []
+    for k, v in student.items():
+        if k in skip or v in (None, "", [], {}):
+            continue
+        if isinstance(v, str) and _is_junk(v):
+            continue
+        parts.append(f"{k}: {v}")
+    return "\n".join(parts) or "No profile data provided yet."
 
 
 def _clean_title(raw: str) -> str:
@@ -38,14 +62,21 @@ def _clean_title(raw: str) -> str:
 
 
 def _format_context(retrieved: RetrievedSet) -> str:
-    """Format chunks with clean source titles so the LLM can cite them."""
+    """Format chunks as GENERAL reference material. The header makes clear this
+    is background knowledge about studying abroad — NOT the student's personal
+    data — so the model never attributes example numbers (e.g. a sample
+    "4 backlogs" or a sample GPA) to the student."""
     if not retrieved.chunks:
-        return "(no retrieved chunks for this query)"
-    parts = []
+        return "(no reference material retrieved)"
+    parts = [
+        "The following are GENERAL reference excerpts about studying abroad. "
+        "They are background info only — never treat numbers or examples here "
+        "as the student's own details.",
+    ]
     for c in retrieved.chunks:
         raw_title = c.metadata.get("title", "unknown source")
         title = _clean_title(raw_title)
-        parts.append(f"[Source: {title}]\n{c.text}")
+        parts.append(f"[{title}]\n{c.text}")
     return "\n\n".join(parts)
 
 

@@ -151,7 +151,7 @@ class GroqGeminiLLM:
         ))
 
         response = await client.aio.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-pro",
             contents=contents,
             config=genai.types.GenerateContentConfig(
                 system_instruction=self._system_with_mode(system, mode),
