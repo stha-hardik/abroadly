@@ -1,13 +1,21 @@
 # Seed data — global knowledge for the eval-layer / RAG
 
-Plain `.txt` (or `.pdf`) files in this directory get ingested into ChromaDB under `kind=global` metadata when you run:
+Plain `.md`, `.txt`, or `.pdf` files in this directory get ingested into ChromaDB under `kind=global` metadata when you run:
 
 ```bash
 cd backend
 ./venv/bin/python scripts/seed_knowledge.py
 ```
 
-The script chunks each file (~300 words per chunk, ~40-word overlap), embeds with Gemini, and upserts into the `abroadly_knowledge` collection. Re-running the script re-upserts with fresh UUIDs (it doesn't dedupe yet — TODO).
+Country folders are preferred:
+
+```bash
+cd backend
+./venv/bin/python scripts/seed_knowledge.py --country australia --dry-run
+./venv/bin/python scripts/seed_knowledge.py --reset --country australia
+```
+
+The script chunks markdown at heading boundaries, embeds with Gemini, and upserts into the `abroadly_knowledge` collection. Chunk IDs are deterministic, so re-running the same corpus upserts in place. Use `--reset --country <country>` when replacing old content.
 
 ## Authoring guidelines
 
@@ -19,12 +27,13 @@ The script chunks each file (~300 words per chunk, ~40-word overlap), embeds wit
 
 ## Current files
 
-- `australia-study-after-12.txt` — undergrad pathways, costs, visa, work rights for Nepali Class 12 graduates
+- `australia/` — Australia admissions, documents, finances, Student visa subclass 500, GS, 485, work rights, scholarships, timeline, and FAQ for Nepali students
+- `uk/` — structured UK corpus for Nepali students
 - `uk-study-after-12.txt` — undergrad pathways, UCAS process, costs, Graduate Route visa for Nepali Class 12 graduates
 
 ## What to add next
 
-Tier 0 expansions for the knowledge base (in priority order):
+Knowledge-base expansions to consider next:
 
 1. Canada after Class 12
 2. United States after Class 12
