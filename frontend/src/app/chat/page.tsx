@@ -53,6 +53,7 @@ interface UploadMessage {
 
 interface CounselorCardMessage {
   role: "counselor_card";
+  auto?: boolean; // true when proactively suggested by the AI (vs. tapped from sidebar)
 }
 
 type Message = UserMessage | AiMessage | CounselorMessage | UploadMessage | CounselorCardMessage;
@@ -685,9 +686,14 @@ function ProfilePopup({ student, onClose }: { student: StudentOut; onClose: () =
 
 /* ── Human counselor card (rendered inside chat) ──────────────────── */
 
-function CounselorCard({ consented, onGrant }: { consented: boolean; onGrant: () => void }) {
+function CounselorCard({ consented, onGrant, auto }: { consented: boolean; onGrant: () => void; auto?: boolean }) {
   return (
     <div className="counselor-card">
+      {auto && (
+        <p className="mb-3 text-[13px] leading-6 text-[#3F3A33]">
+          You&apos;re asking great questions — at this point it can really help to talk to a real person. Here&apos;s one of our counsellors:
+        </p>
+      )}
       <div className="flex items-start gap-3">
         <div className="relative shrink-0">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E11D2A] to-[#7A0D15] text-[15px] font-bold text-white">{COUNSELOR.initials}</div>
@@ -739,6 +745,8 @@ export default function ChatPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const counselorOffered = useRef(false);   // auto-offer the counselor only once
+  const substantiveTurns = useRef(0);       // count of real questions asked
 
   const firstName = useMemo(() => (student?.full_name || "").trim().split(/\s+/)[0] || "", [student]);
   const userInitial = (firstName || "Y").charAt(0).toUpperCase();
@@ -830,6 +838,10 @@ export default function ChatPage() {
       if (taRef.current) { taRef.current.style.height = "auto"; taRef.current.focus(); }
     });
     setMessages((m) => [...m, { role: "user", text }]);
+    // Count real questions (3+ words or a "?") so we can proactively offer a human.
+    if (text.split(/\s+/).length >= 3 || text.includes("?")) {
+      substantiveTurns.current += 1;
+    }
     setThinking(true);
     try {
       const res = await chat(studentId, text);
@@ -837,6 +849,15 @@ export default function ChatPage() {
       // When the AI nudges an upload, surface a clean popup (once, not while panel open).
       if (answerWantsUpload(res) && !docPanelOpen) {
         setUploadPrompt({ label: inferUploadLabel(res) });
+      }
+      // After a few substantive questions, proactively suggest a human counsellor — once.
+      if (!counselorOffered.current && substantiveTurns.current >= 3 && !callConsented) {
+        counselorOffered.current = true;
+        setMessages((m) =>
+          m.length && m[m.length - 1].role === "counselor_card"
+            ? m
+            : [...m, { role: "counselor_card", auto: true }]
+        );
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error contacting server.";
@@ -1120,7 +1141,7 @@ export default function ChatPage() {
                   return (
                     <div key={i} className="chat-row chat-row-ai" style={{ animationDelay: "0.04s" }}>
                       <AiAvatar />
-                      <CounselorCard consented={callConsented} onGrant={grantCounselorCall} />
+                      <CounselorCard consented={callConsented} onGrant={grantCounselorCall} auto={msg.auto} />
                     </div>
                   );
                 }
