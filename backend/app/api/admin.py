@@ -55,6 +55,7 @@ class StudentListItem(BaseModel):
     preferred_field: str | None
     gpa: float | None
     ai_paused: bool
+    call_consent: bool = False
     created_at: datetime
     chat_count: int = 0
     doc_count: int = 0
@@ -73,6 +74,7 @@ class StudentDetail(BaseModel):
     preferred_field: str | None
     goals: str | None
     ai_paused: bool
+    call_consent: bool = False
     created_at: datetime
     updated_at: datetime
     chat_count: int = 0
@@ -325,7 +327,8 @@ async def admin_list_students(
             id=str(s.id), full_name=s.full_name, email=s.email, phone=s.phone,
             education_level=s.education_level, target_countries=s.target_countries or [],
             preferred_field=s.preferred_field, gpa=s.gpa,
-            ai_paused=s.ai_paused or False, created_at=s.created_at,
+            ai_paused=s.ai_paused or False, call_consent=s.call_consent or False,
+            created_at=s.created_at,
             chat_count=chat_count, doc_count=doc_count, last_message=last_message,
         ))
 
@@ -351,6 +354,7 @@ async def admin_get_student(
         location=s.location, education_level=s.education_level, gpa=s.gpa,
         target_countries=s.target_countries or [], preferred_field=s.preferred_field,
         goals=s.goals, ai_paused=s.ai_paused or False,
+        call_consent=s.call_consent or False,
         created_at=s.created_at, updated_at=s.updated_at,
         chat_count=chat_count, doc_count=doc_count,
     )

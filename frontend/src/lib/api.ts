@@ -221,6 +221,19 @@ export async function getChatHistory(
   );
 }
 
+export async function requestCounselorCall(
+  student_id: string,
+  phone?: string
+): Promise<StudentOut> {
+  return handle<StudentOut>(
+    await fetch(`${BASE}/students/${student_id}/request-call`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: phone ?? null }),
+    })
+  );
+}
+
 export function googleLoginUrl(): string {
   return `${BASE}/auth/google/login`;
 }

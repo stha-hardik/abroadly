@@ -11,12 +11,22 @@ import {
   getChatHistory,
   getStudentDocuments,
   getStudentDocumentDownloadUrl,
+  requestCounselorCall,
   logoutStudent,
   type ChatResponse,
   type ChatSource,
   type StudentDocument,
   type StudentOut,
 } from "@/lib/api";
+
+/* Abroadly's own human counsellor (placeholder identity — operator can edit). */
+const COUNSELOR = {
+  name: "Aastha Koirala",
+  role: "Study-Abroad Counsellor · Abroadly",
+  experience: "8+ years · guided 800+ Nepali students",
+  blurb: "Friendly, no-pressure help with universities, visas, scholarships and documents.",
+  initials: "AK",
+};
 
 interface UserMessage {
   role: "user";
@@ -41,7 +51,11 @@ interface UploadMessage {
   docType?: string;
 }
 
-type Message = UserMessage | AiMessage | CounselorMessage | UploadMessage;
+interface CounselorCardMessage {
+  role: "counselor_card";
+}
+
+type Message = UserMessage | AiMessage | CounselorMessage | UploadMessage | CounselorCardMessage;
 
 /* ── Question launcher (empty state) + suggestion starters ─────────── */
 
@@ -189,7 +203,7 @@ function TypingDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="inline-block h-[6px] w-[6px] rounded-full bg-[#0A6E45]"
+          className="inline-block h-[6px] w-[6px] rounded-full bg-[#E11D2A]"
           style={{ opacity: 0.4, animation: `dotPulse 1.4s ease-in-out ${i * 0.16}s infinite` }}
         />
       ))}
@@ -291,28 +305,50 @@ function enrichEmoji(text: string): string {
   return out;
 }
 
+function renderInline(content: string, keyBase: number) {
+  return content.split(/(\*\*[^*]+\*\*)/).map((seg, j) =>
+    seg.startsWith("**") && seg.endsWith("**")
+      ? <strong key={`${keyBase}-${j}`} className="font-semibold text-[var(--ab-ink)]">{seg.slice(2, -2)}</strong>
+      : seg
+  );
+}
+
 function FormattedBody({ text }: { text: string }) {
   const lines = enrichEmoji(text).split("\n");
   return (
     <div className="chat-bubble-text">
       {lines.map((line, i) => {
-        if (!line.trim()) return <br key={i} />;
-        const isBullet = /^\s*[\*\-•]\s+/.test(line);
-        const content = line.replace(/^\s*[\*\-•]\s+/, "");
-        const formatted = content.split(/(\*\*[^*]+\*\*)/).map((seg, j) =>
-          seg.startsWith("**") && seg.endsWith("**")
-            ? <strong key={j} className="font-semibold text-[var(--ab-ink)]">{seg.slice(2, -2)}</strong>
-            : seg
-        );
-        if (isBullet) {
+        if (!line.trim()) return <div key={i} className="h-1.5" />;
+
+        const bulletMatch = /^\s*[\*\-•]\s+(.*)$/.exec(line);
+        const numMatch = /^\s*(\d+)\.\s+(.*)$/.exec(line);
+        const trimmed = line.trim();
+        const isHeading = /^\*\*[^*]+\*\*:?$/.test(trimmed); // a line that's entirely bold = subheading
+
+        if (isHeading) {
           return (
-            <div key={i} className="flex gap-2 pl-1 py-0.5">
-              <span className="text-[#0A6E45] mt-[3px] text-[8px] shrink-0">{"●"}</span>
-              <span>{formatted}</span>
+            <p key={i} className="mt-2 mb-1 text-[13px] font-bold text-[var(--ab-ink)]">
+              {trimmed.replace(/^\*\*|\*\*:?$/g, "").replace(/:$/, "")}
+            </p>
+          );
+        }
+        if (numMatch) {
+          return (
+            <div key={i} className="flex gap-2.5 py-[3px]">
+              <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[#FDECEE] text-[10px] font-bold text-[#E11D2A]">{numMatch[1]}</span>
+              <span className="flex-1">{renderInline(numMatch[2], i)}</span>
             </div>
           );
         }
-        return <p key={i} className="py-0.5">{formatted}</p>;
+        if (bulletMatch) {
+          return (
+            <div key={i} className="flex gap-2 pl-0.5 py-[3px]">
+              <span className="text-[#E11D2A] mt-[6px] text-[7px] shrink-0">{"●"}</span>
+              <span className="flex-1">{renderInline(bulletMatch[1], i)}</span>
+            </div>
+          );
+        }
+        return <p key={i} className="py-0.5">{renderInline(line, i)}</p>;
       })}
     </div>
   );
@@ -510,7 +546,7 @@ function DocumentPanel({
                     {uploadedDoc ? (
                       <div>
                         <p className="text-[11px] text-[#6B655C] truncate">{uploadedDoc.filename}</p>
-                        <p className="text-[10px] text-emerald-600 mt-0.5">
+                        <p className="text-[10px] text-[#8A847B] mt-0.5">
                           {uploadedDoc.ext.replace(".", "").toUpperCase()} {"·"} {formatBytes(uploadedDoc.size_bytes)}
                         </p>
                       </div>
@@ -520,11 +556,11 @@ function DocumentPanel({
                   </div>
                   {uploadedDoc ? (
                     <div className="flex items-center gap-2 shrink-0">
-                      <button type="button" onClick={() => onDiscuss(dt)} className="rounded-lg bg-[#E8F2EC] px-2.5 py-1.5 text-[11px] font-bold text-[#0A6E45] hover:bg-[#d8ebe0] transition-colors">Ask AI</button>
-                      <button type="button" onClick={() => fileRefs.current[dt.id]?.click()} className="text-[11px] font-semibold text-[#8A847B] hover:text-[#0A6E45] transition-colors">Replace</button>
+                      <button type="button" onClick={() => onDiscuss(dt)} className="rounded-lg bg-[#FDECEE] px-2.5 py-1.5 text-[11px] font-bold text-[#E11D2A] hover:bg-[#fbdce0] transition-colors">Ask AI</button>
+                      <button type="button" onClick={() => fileRefs.current[dt.id]?.click()} className="text-[11px] font-semibold text-[#8A847B] hover:text-[#E11D2A] transition-colors">Replace</button>
                     </div>
                   ) : isUploading ? (
-                    <div className="shrink-0"><div className="h-5 w-5 rounded-full border-2 border-[#0A6E45] border-t-transparent animate-spin" /></div>
+                    <div className="shrink-0"><div className="h-5 w-5 rounded-full border-2 border-[#E11D2A] border-t-transparent animate-spin" /></div>
                   ) : (
                     <button type="button" onClick={() => fileRefs.current[dt.id]?.click()} className="doc-upload-btn shrink-0">Upload</button>
                   )}
@@ -551,10 +587,10 @@ function DocumentPanel({
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-[#8A847B]">{completedTypeCount} of {docTypes.length} categories uploaded</span>
             <div className="h-1.5 w-20 rounded-full bg-[#EFECE4] overflow-hidden">
-              <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${(completedTypeCount / docTypes.length) * 100}%` }} />
+              <div className="h-full rounded-full bg-[#E11D2A] transition-all duration-500" style={{ width: `${(completedTypeCount / docTypes.length) * 100}%` }} />
             </div>
           </div>
-          <button type="button" onClick={onClose} className="ab-focus rounded-lg bg-[#12244a] px-5 py-2.5 text-[12px] font-bold text-white hover:bg-[#1F3D78] transition-colors">Done</button>
+          <button type="button" onClick={onClose} className="ab-focus rounded-lg bg-[#E11D2A] px-5 py-2.5 text-[12px] font-bold text-white hover:bg-[#C0121F] transition-colors">Done</button>
         </div>
       </div>
     </>
@@ -579,7 +615,7 @@ function UploadPromptModal({
         <button type="button" onClick={onClose} aria-label="Close" className="ab-focus absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-lg text-[#8A847B] hover:bg-[#F0EDE4] transition-colors">
           <CloseIcon />
         </button>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E8F2EC] text-[#0A6E45]">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FDECEE] text-[#E11D2A]">
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
             <path d="M12 16V8m0 0-3.5 3.5M12 8l3.5 3.5M5 19h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -591,7 +627,7 @@ function UploadPromptModal({
           Upload it and I&apos;ll tailor my guidance to your real situation. It stays private to your account.
         </p>
         <div className="mt-5 flex gap-2.5">
-          <button type="button" onClick={onUpload} className="ab-focus flex-1 rounded-xl bg-[#0A6E45] px-4 py-3 text-[13px] font-bold text-white shadow-[var(--shadow-sm)] transition hover:bg-[#095C3A]">
+          <button type="button" onClick={onUpload} className="ab-focus flex-1 rounded-xl bg-[#E11D2A] px-4 py-3 text-[13px] font-bold text-white shadow-[var(--shadow-sm)] transition hover:bg-[#C0121F]">
             Upload now
           </button>
           <button type="button" onClick={onClose} className="ab-focus rounded-xl border border-[#E8E5DD] bg-white px-4 py-3 text-[13px] font-semibold text-[#6B655C] transition hover:bg-[#F4F2EC]">
@@ -600,6 +636,88 @@ function UploadPromptModal({
         </div>
       </div>
     </>
+  );
+}
+
+/* ── Profile popup ────────────────────────────────────────────────── */
+
+function ProfilePopup({ student, onClose }: { student: StudentOut; onClose: () => void }) {
+  const fields: [string, string | number | null | undefined][] = [
+    ["Email", student.email],
+    ["Phone", student.phone],
+    ["Education", student.education_level?.replace(/_/g, " ")],
+    ["GPA", student.gpa],
+    ["Target countries", (student.target_countries || []).join(", ")],
+    ["Field of interest", student.preferred_field],
+  ];
+  const initial = (student.full_name || "Y").charAt(0).toUpperCase();
+  return (
+    <>
+      <div className="upload-modal-overlay" onClick={onClose} />
+      <div className="upload-modal" role="dialog" aria-modal="true">
+        <button type="button" onClick={onClose} aria-label="Close" className="ab-focus absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-lg text-[#8A847B] hover:bg-[#F0EDE4] transition-colors">
+          <CloseIcon />
+        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E11D2A] to-[#7A0D15] text-[16px] font-bold text-white">{initial}</div>
+          <div className="min-w-0">
+            <h3 className="text-[16px] font-extrabold tracking-[-0.01em] text-[var(--ab-ink)] truncate">{student.full_name || "Your profile"}</h3>
+            <p className="text-[12px] text-[#8A847B] truncate">{student.email}</p>
+          </div>
+        </div>
+        <div className="mt-4 space-y-2.5">
+          {fields.map(([label, value]) =>
+            value ? (
+              <div key={label} className="flex items-baseline justify-between gap-3">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-[#A8A296] shrink-0">{label}</span>
+                <span className="text-[13px] font-medium text-[var(--ab-ink)] text-right capitalize">{String(value)}</span>
+              </div>
+            ) : null
+          )}
+        </div>
+        <a href="/onboarding/details" className="ab-focus mt-5 block w-full rounded-xl border border-[#E8E5DD] bg-white px-4 py-2.5 text-center text-[13px] font-semibold text-[var(--ab-ink)] transition hover:bg-[#F4F2EC]">
+          Edit my details
+        </a>
+      </div>
+    </>
+  );
+}
+
+/* ── Human counselor card (rendered inside chat) ──────────────────── */
+
+function CounselorCard({ consented, onGrant }: { consented: boolean; onGrant: () => void }) {
+  return (
+    <div className="counselor-card">
+      <div className="flex items-start gap-3">
+        <div className="relative shrink-0">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E11D2A] to-[#7A0D15] text-[15px] font-bold text-white">{COUNSELOR.initials}</div>
+          <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white">
+            <svg viewBox="0 0 20 20" className="h-4 w-4 text-[#E11D2A]" fill="currentColor"><path d="M10 1l2.4 1.8 3-.1 1 2.8 2.5 1.6-1 2.8 1 2.8-2.5 1.6-1 2.8-3-.1L10 19l-2.4-1.8-3 .1-1-2.8L1.1 13l1-2.8-1-2.8 2.5-1.6 1-2.8 3 .1L10 1z"/><path d="M8.6 12.2 6.4 10l-1 1 3.2 3.2 5.8-5.8-1-1z" fill="#fff"/></svg>
+          </span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[14px] font-extrabold text-[var(--ab-ink)]">{COUNSELOR.name}</p>
+            <span className="rounded-full bg-[#FDECEE] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#E11D2A]">Verified</span>
+          </div>
+          <p className="text-[12px] font-medium text-[#6B655C]">{COUNSELOR.role}</p>
+          <p className="mt-0.5 text-[11px] text-[#8A847B]">{COUNSELOR.experience}</p>
+        </div>
+      </div>
+      <p className="mt-3 text-[13px] leading-6 text-[#3F3A33]">{COUNSELOR.blurb}</p>
+      {consented ? (
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-[#F2FBF6] border border-emerald-100 px-3.5 py-2.5 text-[12.5px] font-semibold text-emerald-700">
+          <CheckCircleIcon />
+          <span>{COUNSELOR.name.split(" ")[0]} will reach out to call you soon.</span>
+        </div>
+      ) : (
+        <button type="button" onClick={onGrant} className="counselor-call-btn">
+          <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none"><path d="M4.5 3h3l1.2 3-1.6 1.2a9 9 0 0 0 4.7 4.7L13 10.3l3 1.2v3a1.5 1.5 0 0 1-1.6 1.5A12.5 12.5 0 0 1 3 4.6 1.5 1.5 0 0 1 4.5 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+          Allow {COUNSELOR.name.split(" ")[0]} to call me
+        </button>
+      )}
+      <p className="mt-2 text-[10.5px] text-[#A8A296]">Free · Abroadly&apos;s own counsellor · not a paid agent</p>
+    </div>
   );
 }
 
@@ -616,6 +734,8 @@ export default function ChatPage() {
   const [docPanelOpen, setDocPanelOpen] = useState(false);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [uploadPrompt, setUploadPrompt] = useState<{ label: string } | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [callConsented, setCallConsented] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -776,6 +896,24 @@ export default function ChatPage() {
     setMessages((m) => [...m, { role: "upload", status: "done" as const, filename, text: `Uploaded ${docType.label}: ${filename}`, docType: docType.id }]);
   }, [refreshDocuments, studentId]);
 
+  function showCounselorCard() {
+    setCallConsented(false);
+    setMessages((m) => {
+      // Avoid stacking duplicate cards at the end.
+      if (m.length && m[m.length - 1].role === "counselor_card") return m;
+      return [...m, { role: "counselor_card" }];
+    });
+  }
+
+  async function grantCounselorCall() {
+    setCallConsented(true); // optimistic
+    try {
+      await requestCounselorCall(studentId, student?.phone || undefined);
+    } catch {
+      /* consent is best-effort; keep optimistic UI */
+    }
+  }
+
   const hasMessages = messages.length > 0;
 
   // Suggestion rail: contextual follow-ups from the last AI reply, else curated starters.
@@ -808,26 +946,31 @@ export default function ChatPage() {
           </div>
         </Link>
 
-        {/* Student profile chip */}
+        {/* Student profile chip — opens mini profile popup */}
         {student && (
-          <div className="mt-6 flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#0A6E45] to-[#12244a] text-[12px] font-bold text-white">
+          <button
+            type="button"
+            onClick={() => setProfileOpen(true)}
+            className="ab-focus mt-6 flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left transition hover:border-[#E11D2A]/30 hover:bg-white/[0.06]"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#E11D2A] to-[#7A0D15] text-[12px] font-bold text-white">
               {userInitial}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[12px] font-semibold text-white/85">{firstName || "Your profile"}</p>
               <p className="truncate text-[10px] text-white/40">
-                {[student.education_level?.replace(/_/g, " "), (student.target_countries || [])[0]].filter(Boolean).join(" · ") || "Tap to add details"}
+                {[student.education_level?.replace(/_/g, " "), (student.target_countries || [])[0]].filter(Boolean).join(" · ") || "Tap to view details"}
               </p>
             </div>
-          </div>
+            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-white/30" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
         )}
 
         {/* Documents button */}
         <button
           type="button"
           onClick={() => setDocPanelOpen(true)}
-          className="ab-focus mt-3 flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left transition hover:border-[#7DDBB1]/30 hover:bg-white/[0.06]"
+          className="ab-focus mt-3 flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left transition hover:border-[#E11D2A]/30 hover:bg-white/[0.06]"
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] text-white/70"><FolderIcon /></span>
           <div className="min-w-0 flex-1">
@@ -835,7 +978,7 @@ export default function ChatPage() {
             <p className="text-[10px] text-white/35">{uploadedCount > 0 ? `${uploadedCount} uploaded` : "Transcript, passport, IELTS…"}</p>
           </div>
           {uploadedCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500/20 px-1.5 text-[10px] font-bold text-emerald-300">{uploadedCount}</span>
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500/20 px-1.5 text-[10px] font-bold text-red-300">{uploadedCount}</span>
           )}
         </button>
 
@@ -849,9 +992,24 @@ export default function ChatPage() {
           ))}
         </div>
 
+        {/* Contact a human counselor */}
+        <button
+          type="button"
+          onClick={showCounselorCard}
+          className="ab-focus mt-3 flex w-full items-center gap-3 rounded-xl border border-[#E11D2A]/25 bg-[#E11D2A]/[0.08] px-3 py-3 text-left transition hover:bg-[#E11D2A]/[0.14]"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E11D2A]/15 text-[#FF8A93]">
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none"><path d="M4.5 3h3l1.2 3-1.6 1.2a9 9 0 0 0 4.7 4.7L13 10.3l3 1.2v3a1.5 1.5 0 0 1-1.6 1.5A12.5 12.5 0 0 1 3 4.6 1.5 1.5 0 0 1 4.5 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-semibold text-white/90">Contact a human counselor</p>
+            <p className="text-[10px] text-white/40">Talk to a real Abroadly advisor</p>
+          </div>
+        </button>
+
         <div className="mt-auto pt-4">
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#7DDBB1]/80">Why trust it</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#FF8A93]/80">Why trust it</p>
             <p className="mt-2 text-[12px] leading-[1.6] text-white/50">Abroadly points you to official sources — embassies, universities, gov portals — never paid agents.</p>
           </div>
         </div>
@@ -880,14 +1038,15 @@ export default function ChatPage() {
             <button type="button" onClick={() => setDocPanelOpen(true)} className="ab-focus chat-header-btn flex items-center gap-1.5 lg:hidden">
               <FolderIcon />
               <span>Docs</span>
-              {uploadedCount > 0 && <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-100 px-1 text-[9px] font-bold text-emerald-700">{uploadedCount}</span>}
+              {uploadedCount > 0 && <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-100 px-1 text-[9px] font-bold text-red-700">{uploadedCount}</span>}
             </button>
             <button
               type="button"
               onClick={() => { logoutStudent().finally(() => { localStorage.removeItem("abroadly_student_id"); router.push("/onboarding"); }); }}
-              className="ab-focus chat-header-btn"
+              className="ab-focus chat-header-btn flex items-center gap-1.5"
             >
-              New session
+              <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3M13 14l4-4-4-4M17 10H8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Logout
             </button>
           </div>
         </header>
@@ -922,7 +1081,7 @@ export default function ChatPage() {
                 </div>
 
                 <button type="button" onClick={() => setDocPanelOpen(true)} className="ab-focus chat-upload-nudge">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F2EC] text-[#0A6E45]"><FolderIcon /></span>
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FDECEE] text-[#E11D2A]"><FolderIcon /></span>
                   <span className="text-left">
                     <span className="block text-[13px] font-semibold text-[var(--ab-ink)]">Upload your documents</span>
                     <span className="block text-[11px] text-[#8A847B]">Marksheet, passport, IELTS — for answers tailored to you</span>
@@ -954,6 +1113,14 @@ export default function ChatPage() {
                         <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide mb-1">Human Counselor</p>
                         <p className="chat-bubble-text whitespace-pre-wrap">{msg.text}</p>
                       </div>
+                    </div>
+                  );
+                }
+                if (msg.role === "counselor_card") {
+                  return (
+                    <div key={i} className="chat-row chat-row-ai" style={{ animationDelay: "0.04s" }}>
+                      <AiAvatar />
+                      <CounselorCard consented={callConsented} onGrant={grantCounselorCall} />
                     </div>
                   );
                 }
@@ -1000,7 +1167,7 @@ export default function ChatPage() {
               <div className="chat-suggestion-rail">
                 {railSuggestions.map((s, i) => (
                   <button key={i} type="button" onClick={() => sendMessage(s)} className="ab-focus chat-suggestion-chip">
-                    {hasMessages ? <ArrowUpIcon /> : <span className="text-[#0A6E45]">✦</span>}
+                    {hasMessages ? <ArrowUpIcon /> : <span className="text-[#E11D2A]">✦</span>}
                     <span className="truncate">{s}</span>
                   </button>
                 ))}
@@ -1056,6 +1223,10 @@ export default function ChatPage() {
           onUpload={() => { setUploadPrompt(null); setDocPanelOpen(true); }}
           onClose={() => setUploadPrompt(null)}
         />
+      )}
+
+      {profileOpen && student && (
+        <ProfilePopup student={student} onClose={() => setProfileOpen(false)} />
       )}
     </main>
   );

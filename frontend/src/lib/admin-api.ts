@@ -74,6 +74,7 @@ export interface StudentListItem {
   preferred_field: string | null;
   gpa: number | null;
   ai_paused: boolean;
+  call_consent?: boolean;
   created_at: string;
   chat_count: number;
   doc_count: number;
@@ -98,6 +99,7 @@ export interface StudentDetail {
   preferred_field: string | null;
   goals: string | null;
   ai_paused: boolean;
+  call_consent?: boolean;
   created_at: string;
   updated_at: string;
   chat_count: number;

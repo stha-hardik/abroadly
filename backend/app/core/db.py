@@ -110,6 +110,10 @@ _ADD_PROFILE_COMPLETED = """
 ALTER TABLE students ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT FALSE;
 """
 
+_ADD_CALL_CONSENT = """
+ALTER TABLE students ADD COLUMN IF NOT EXISTS call_consent BOOLEAN DEFAULT FALSE;
+"""
+
 _BACKFILL_PROFILE_COMPLETED = """
 UPDATE students
 SET profile_completed = TRUE
@@ -150,6 +154,7 @@ async def create_tables() -> None:
         await conn.execute(text(_ADD_AI_PAUSED))
         await conn.execute(text(_ADD_EXPECTED_GPA))
         await conn.execute(text(_ADD_PROFILE_COMPLETED))
+        await conn.execute(text(_ADD_CALL_CONSENT))
         await conn.execute(text(_BACKFILL_PROFILE_COMPLETED))
         await conn.execute(text(_SET_PROFILE_COMPLETED_DEFAULT))
         await conn.execute(text(_FIX_ROLE_CONSTRAINT))
