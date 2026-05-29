@@ -1,0 +1,73 @@
+name: Seed Knowledge on Hostinger VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      country:
+        description: "Country folder to seed, for example australia. Leave blank to seed all."
+        required: false
+        default: "australia"
+      reset:
+        description: "Reset matching global chunks before seeding"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Seed knowledge via SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          COUNTRY: ${{ inputs.country }}
+          RESET: ${{ inputs.reset }}
+        run: |
+          set -euo pipefail
+
+          country_arg=""
+          if [ -n "$COUNTRY" ]; then
+            if ! [[ "$COUNTRY" =~ ^[A-Za-z0-9_-]+$ ]]; then
+              echo "Invalid country input: $COUNTRY"
+              exit 1
+            fi
+            country_arg="--country $COUNTRY"
+          fi
+
+          reset_arg=""
+          if [ "$RESET" = "true" ]; then
+            reset_arg="--reset"
+          fi
+
+          ssh -i ~/.ssh/id_ed25519 \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              -o StrictHostKeyChecking=yes \
+              -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+              "set -euo pipefail; cd /opt/abroadly && git fetch origin main && git reset --hard origin/main && docker compose -f docker-compose.prod.yml up -d --build backend && docker compose -f docker-compose.prod.yml exec -T backend python scripts/seed_knowledge.py $reset_arg $country_arg"
+
+      - name: Smoke-test live API
+        run: |
+          for i in 1 2 3 4 5; do
+            api_code=$(curl -fsS -o /dev/null -w '%{http_code}' https://abroadly.online/api/health || true)
+            echo "attempt $i: api=$api_code"
+            if [ "$api_code" = "200" ]; then exit 0; fi
+            sleep 10
+          done
+          echo "API smoke test timed out"
+          exit 1
