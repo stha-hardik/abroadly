@@ -19,6 +19,12 @@ import {
   type StudentDocument,
   type StudentOut,
 } from "@/lib/api";
+import {
+  COUNTRY_PROFILES,
+  pickPendingTodos,
+  resolveTargetCountries,
+  type PendingTodo,
+} from "@/lib/country-data";
 
 /* Abroadly's own human counsellor (placeholder identity — operator can edit). */
 const COUNSELOR = {
@@ -195,6 +201,35 @@ function ArrowUpIcon() {
     </svg>
   );
 }
+
+function ArrowRightSm() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3 w-3 shrink-0" fill="none">
+      <path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" fill="none">
+      <path d="M3.5 2.5h2.4l1 2.4-1.3 1A7.2 7.2 0 0 0 9.4 9.8l1-1.3 2.4 1V12a1.2 1.2 0 0 1-1.3 1.2A10 10 0 0 1 2.3 3.8 1.2 1.2 0 0 1 3.5 2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* Compact 8-row document slot for the chat sidebar (and dashboard). Same IDs
+ * used by both surfaces so they stay in sync. */
+const SIDEBAR_DOC_SLOTS = [
+  { id: "grade_sheet", label: "Transcript" },
+  { id: "citizenship", label: "Citizenship" },
+  { id: "passport", label: "Passport" },
+  { id: "ielts", label: "English test" },
+  { id: "sop", label: "Statement of purpose" },
+  { id: "recommendation", label: "Recommendation letters" },
+  { id: "financial", label: "Financial proof" },
+  { id: "other", label: "Other" },
+];
 
 /* ── Typing indicator ─────────────────────────────────────────────── */
 
@@ -967,6 +1002,22 @@ export default function ChatPage() {
 
   const hasMessages = messages.length > 0;
 
+  // Sidebar to-do: top 3 pending items for the student's primary target country.
+  // Same priority engine as the dashboard hero, so the two surfaces never disagree.
+  const sidebarTodos: PendingTodo[] = useMemo(() => {
+    if (!student) return [];
+    const docTypes = new Set(documents.map((d) => d.doc_type));
+    const country = resolveTargetCountries(student.target_countries)[0];
+    const countryName = COUNTRY_PROFILES[country].name;
+    return pickPendingTodos(
+      student.profile_completed,
+      docTypes,
+      countryName,
+      student.preferred_field ?? "your field",
+      3,
+    );
+  }, [student, documents]);
+
   // Suggestion rail: contextual follow-ups from the last AI reply, else curated starters.
   const railSuggestions = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -985,84 +1036,170 @@ export default function ChatPage() {
 
   return (
     <main className="chat-layout">
-      {/* ── Sidebar ───────────────────────────────────────────────── */}
+      {/* ── Sidebar ───────────────────────────────────────────────────
+          Three focused sections on a paper-2 band: Counsellor / Documents
+          / To-do. The chat header has a Dashboard link for the fuller surface.
+          Hidden below lg; on mobile, the chat-header buttons (Dashboard,
+          Docs) cover the same affordances. */}
       <aside className="chat-sidebar">
-        <Link href="/" className="ab-focus flex items-center gap-3 rounded-xl px-1">
-          <div className="h-9 w-9 shrink-0 rounded-[10px] overflow-hidden">
-            <img src="/images/abroadly-logo.png" alt="Ab" className="h-full w-full object-cover" />
-          </div>
-          <div>
-            <p className="text-[13px] font-extrabold text-white">Abroadly</p>
-            <p className="text-[11px] font-medium text-white/40">Study abroad guidance</p>
-          </div>
-        </Link>
-
-        {/* Student profile chip — opens mini profile popup */}
-        {student && (
-          <button
-            type="button"
-            onClick={() => setProfileOpen(true)}
-            className="ab-focus mt-6 flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left transition hover:border-[#E11D2A]/30 hover:bg-white/[0.06]"
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#E11D2A] to-[#7A0D15] text-[12px] font-bold text-white">
-              {userInitial}
+        {/* Tiny header — logo + profile chip */}
+        <div className="border-b border-[#E8E5DD] bg-[#FAF9F6] px-5 py-4">
+          <Link href="/" className="ab-focus flex items-center gap-2.5 rounded-md">
+            <div className="h-7 w-7 shrink-0 overflow-hidden rounded-[8px]">
+              <img src="/images/abroadly-logo.png" alt="Ab" className="h-full w-full object-cover" />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-semibold text-white/85">{firstName || "Your profile"}</p>
-              <p className="truncate text-[10px] text-white/40">
-                {[student.education_level?.replace(/_/g, " "), (student.target_countries || [])[0]].filter(Boolean).join(" · ") || "Tap to view details"}
-              </p>
-            </div>
-            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-white/30" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
-        )}
-
-        {/* Documents button */}
-        <button
-          type="button"
-          onClick={() => setDocPanelOpen(true)}
-          className="ab-focus mt-3 flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left transition hover:border-[#E11D2A]/30 hover:bg-white/[0.06]"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] text-white/70"><FolderIcon /></span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-semibold text-white/80">My Documents</p>
-            <p className="text-[10px] text-white/35">{uploadedCount > 0 ? `${uploadedCount} uploaded` : "Transcript, passport, IELTS…"}</p>
-          </div>
-          {uploadedCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500/20 px-1.5 text-[10px] font-bold text-red-300">{uploadedCount}</span>
-          )}
-        </button>
-
-        <div className="mt-5 space-y-1">
-          <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-white/30">Explore topics</p>
-          {categories.slice(0, 5).map((c) => (
-            <button key={c.label} type="button" onClick={() => sendMessage(c.question)} className="ab-focus chat-sidebar-btn group">
-              <span className="text-base leading-none">{c.icon}</span>
-              <span className="min-w-0 truncate">{c.label}</span>
+            <span className="text-[13px] font-bold tracking-[-0.005em] text-[#1B1916]">Abroadly</span>
+          </Link>
+          {student && (
+            <button
+              type="button"
+              onClick={() => setProfileOpen(true)}
+              className="ab-focus mt-3 flex w-full items-center gap-2 rounded-md px-1 py-1 text-left transition hover:bg-[#F4F2EC]"
+            >
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#12244a] text-[10px] font-bold text-white">
+                {userInitial}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[11.5px] font-semibold text-[#1B1916]">{firstName || "Your profile"}</p>
+                <p className="truncate text-[10px] text-[#8A847B]">
+                  {[student.education_level?.replace(/_/g, " "), (student.target_countries || [])[0]].filter(Boolean).join(" · ") || "Tap to edit"}
+                </p>
+              </div>
+              <ArrowRightSm />
             </button>
-          ))}
+          )}
         </div>
 
-        {/* Contact a human counselor */}
-        <button
-          type="button"
-          onClick={showCounselorCard}
-          className="ab-focus mt-3 flex w-full items-center gap-3 rounded-xl border border-[#E11D2A]/25 bg-[#E11D2A]/[0.08] px-3 py-3 text-left transition hover:bg-[#E11D2A]/[0.14]"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E11D2A]/15 text-[#FF8A93]">
-            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none"><path d="M4.5 3h3l1.2 3-1.6 1.2a9 9 0 0 0 4.7 4.7L13 10.3l3 1.2v3a1.5 1.5 0 0 1-1.6 1.5A12.5 12.5 0 0 1 3 4.6 1.5 1.5 0 0 1 4.5 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-semibold text-white/90">Contact a human counselor</p>
-            <p className="text-[10px] text-white/40">Talk to a real Abroadly advisor</p>
+        {/* Section 1 · Counsellor */}
+        <section className="border-b border-[#E8E5DD] px-5 py-6">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#0A6E45]">Counsellor</p>
+          <div className="mt-3 flex items-start gap-3">
+            <div
+              aria-hidden
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E8F2EC] text-[12px] font-bold text-[#0A6E45]"
+            >
+              {COUNSELOR.initials}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-bold tracking-[-0.005em] text-[#1B1916]">{COUNSELOR.name}</p>
+              <p className="mt-0.5 text-[11px] leading-tight text-[#6B655C]">Study-Abroad Counsellor</p>
+              <p className="mt-1 text-[10.5px] leading-tight text-[#8A847B]">{COUNSELOR.experience}</p>
+            </div>
           </div>
-        </button>
+          {callConsented ? (
+            <div className="mt-3 flex items-center gap-1.5 rounded-md bg-[#E8F2EC] px-2.5 py-2 text-[11px] font-semibold leading-[1.4] text-[#0A6E45]">
+              <CheckCircleIcon />
+              <span>Requested · we&apos;ll reach out within 1 working day</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={grantCounselorCall}
+              className="ab-focus mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-[#E8E5DD] bg-white py-2 text-[12px] font-semibold text-[#1B1916] transition hover:border-[#0A6E45] hover:text-[#0A6E45]"
+            >
+              <PhoneIcon />
+              Request a call
+            </button>
+          )}
+        </section>
 
-        <div className="mt-auto pt-4">
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#FF8A93]/80">Why trust it</p>
-            <p className="mt-2 text-[12px] leading-[1.6] text-white/50">Abroadly points you to official sources — embassies, universities, gov portals — never paid agents.</p>
+        {/* Section 2 · Documents (compact 8-row status) */}
+        <section className="border-b border-[#E8E5DD] px-5 py-6">
+          <div className="flex items-baseline justify-between">
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#0A6E45]">Documents</p>
+            <p className="text-[10.5px] font-semibold text-[#6B655C]">
+              {uploadedCount} / {SIDEBAR_DOC_SLOTS.length}
+            </p>
           </div>
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {SIDEBAR_DOC_SLOTS.map((slot) => {
+              const uploaded = documents.some((d) => d.doc_type === slot.id);
+              return (
+                <li key={slot.id} className="flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-white ${
+                      uploaded ? "bg-[#0A6E45]" : "border border-[#D1CABD] bg-transparent"
+                    }`}
+                  >
+                    {uploaded && (
+                      <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none">
+                        <path d="M2.5 5.5 4 7l3.5-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className={`flex-1 truncate text-[11.5px] ${uploaded ? "text-[#1B1916]" : "text-[#6B655C]"}`}>
+                    {slot.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <button
+            type="button"
+            onClick={() => setDocPanelOpen(true)}
+            className="ab-focus mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-[#E8E5DD] bg-white py-2 text-[12px] font-semibold text-[#1B1916] transition hover:border-[#0A6E45] hover:text-[#0A6E45]"
+          >
+            <FolderIcon />
+            Upload
+          </button>
+        </section>
+
+        {/* Section 3 · To-do (top 3 pending) */}
+        <section className="px-5 py-6">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#0A6E45]">To-do</p>
+          {sidebarTodos.length === 0 ? (
+            <p className="mt-3 text-[11.5px] leading-[1.55] text-[#6B655C]">
+              You&apos;re caught up. Keep refining your shortlist in chat.
+            </p>
+          ) : (
+            <ol className="mt-3 flex flex-col gap-2.5">
+              {sidebarTodos.map((todo, i) => (
+                <li key={todo.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (todo.query) sendMessage(todo.query);
+                      else if (todo.href) router.push(todo.href);
+                    }}
+                    className="ab-focus group flex w-full items-start gap-2 rounded-md px-1 py-1 text-left transition hover:bg-white"
+                  >
+                    <span
+                      aria-hidden
+                      className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#FAF9F6] text-[9px] font-bold text-[#0A6E45] ring-1 ring-[#E8E5DD]"
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[12px] font-semibold leading-tight text-[#1B1916]">
+                        {todo.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-[10.5px] leading-tight text-[#8A847B]">
+                        {todo.detail}
+                      </p>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
+          <Link
+            href="/dashboard"
+            className="ab-focus mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-[#1F3D78] transition hover:text-[#0A6E45]"
+          >
+            Open dashboard <ArrowRightSm />
+          </Link>
+        </section>
+
+        <div className="mt-auto border-t border-[#E8E5DD] px-5 py-3">
+          <button
+            type="button"
+            onClick={() => { logoutStudent().finally(() => { localStorage.removeItem("abroadly_student_id"); router.push("/onboarding"); }); }}
+            className="ab-focus inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#8A847B] transition hover:text-[#1B1916]"
+          >
+            <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none"><path d="M6 14H4a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 4 2h2M11 11l3-3-3-3M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Log out
+          </button>
         </div>
       </aside>
 

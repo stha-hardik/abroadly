@@ -90,12 +90,12 @@ body {
 
 .chat-sidebar {
   display: none;
-  width: 260px;
+  width: 280px;
   flex-shrink: 0;
   flex-direction: column;
-  padding: 20px 16px;
-  background: #0f0b1a;
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  overflow-y: auto;
+  background: #F4F2EC;
+  border-right: 1px solid #E8E5DD;
 }
 
 @media (min-width: 1024px) {
@@ -104,22 +104,18 @@ body {
   }
 }
 
-.chat-sidebar-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
-  transition: all 0.15s ease;
+.chat-sidebar::-webkit-scrollbar {
+  width: 5px;
 }
-.chat-sidebar-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
+.chat-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+}
+.chat-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.15);
 }
 
 /* ── Chat main area ────────────────────────────────────────────────── */
