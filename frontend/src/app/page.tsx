@@ -154,31 +154,15 @@ export default function Home() {
           </span>
 
           <h1 className="ab-fade-up ab-d2 ab-display-1 mt-7 text-white">
-            DIY your <span className="text-[#FF7A3D]">academic</span> journey
+            Study abroad, <span className="text-[#FF7A3D]">figured out.</span>
           </h1>
 
-          <p className="ab-fade-up ab-d3 mt-5 max-w-xl text-[15px] leading-[1.65] text-white/70 sm:text-[16px]">
-            AI-guided answers on eligibility, documents, scholarships, and visas — grounded in
-            official sources, not an agency&apos;s sales pitch.
+          <p className="ab-fade-up ab-d3 mt-5 max-w-lg text-[15px] leading-[1.65] text-white/70 sm:text-[16px]">
+            AI-guided answers grounded in official sources — never an agent&apos;s sales pitch.
           </p>
 
           <div className="ab-fade-up ab-d4 mt-9 w-full">
             <HeroIntentForm />
-          </div>
-
-          {/* honest trust signals (no inflated numbers) */}
-          <div className="ab-fade-up ab-d5 mt-11 flex flex-wrap items-center justify-center gap-2">
-            {["100% free", "Official sources", "No sales pitch"].map((t) => (
-              <span
-                key={t}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-[12px] font-semibold text-white/70"
-              >
-                <svg viewBox="0 0 16 16" aria-hidden className="h-3.5 w-3.5 text-[#7DDBB1]" fill="none">
-                  <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {t}
-              </span>
-            ))}
           </div>
         </div>
       </section>
