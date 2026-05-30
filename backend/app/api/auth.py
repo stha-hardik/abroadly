@@ -50,7 +50,7 @@ class GoogleAuthResponse(BaseModel):
 
 class CompleteProfileRequest(BaseModel):
     full_name: str = Field(..., min_length=1, max_length=120)
-    phone: str | None = Field(None, max_length=40)
+    phone: str = Field(..., min_length=1, max_length=40)
     location: str | None = Field(None, max_length=120)
     education_level: EducationLevel
     gpa: float | None = Field(None, ge=0, le=4.5)
@@ -118,6 +118,13 @@ def _clean_text(value: str | None) -> str | None:
         return None
     cleaned = value.strip()
     return cleaned or None
+
+
+def _clean_required_text(value: str, detail: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        raise HTTPException(status_code=422, detail=detail)
+    return cleaned
 
 
 def _clean_countries(countries: list[str]) -> list[str]:
@@ -282,7 +289,7 @@ async def complete_profile(
     db: AsyncSession = Depends(get_session),
 ) -> StudentOut:
     student.full_name = req.full_name.strip()
-    student.phone = _clean_text(req.phone)
+    student.phone = _clean_required_text(req.phone, "phone_required")
     student.location = _clean_text(req.location)
     student.education_level = req.education_level
     student.gpa = req.gpa

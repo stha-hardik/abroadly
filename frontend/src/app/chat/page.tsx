@@ -7,6 +7,7 @@ import {
   chat,
   uploadFile,
   getStudent,
+  updateStudent,
   getCurrentStudent,
   getChatHistory,
   getStudentDocuments,
@@ -16,6 +17,7 @@ import {
   type ChatResponse,
   type ChatSource,
   type ChatTurn,
+  type EducationLevel,
   type StudentDocument,
   type StudentOut,
 } from "@/lib/api";
@@ -141,6 +143,59 @@ const docTypes: DocType[] = [
   { id: "ielts", label: "IELTS / PTE / TOEFL", icon: "\u{1F4DD}", desc: "English proficiency test score", accept: ".pdf,.jpg,.jpeg,.png" },
   { id: "other", label: "Other Document", icon: "\u{1F4CE}", desc: "Any other relevant document", accept: ".pdf,.txt,.jpg,.jpeg,.png" },
 ];
+
+const EDUCATION_OPTIONS: { value: EducationLevel; label: string }[] = [
+  { value: "plus_two", label: "+2 / Class 12" },
+  { value: "a_levels", label: "A-Levels" },
+  { value: "bba", label: "BBA" },
+  { value: "bachelors", label: "Bachelors" },
+  { value: "other", label: "Other" },
+];
+
+const PROFILE_COUNTRY_OPTIONS = [
+  "United Kingdom",
+  "Australia",
+  "Canada",
+  "United States",
+  "New Zealand",
+  "Germany",
+  "Finland",
+  "Japan",
+  "South Korea",
+  "Ireland",
+];
+
+interface ProfileFormState {
+  full_name: string;
+  phone: string;
+  location: string;
+  education_level: EducationLevel;
+  gpa: string;
+  expected_gpa: string;
+  preferred_field: string;
+  target_countries: string[];
+  goals: string;
+}
+
+function optionalProfileNumber(value: string): number | null | undefined {
+  if (value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function profileFormFromStudent(student: StudentOut): ProfileFormState {
+  return {
+    full_name: student.full_name || "",
+    phone: student.phone || "",
+    location: student.location || "",
+    education_level: student.education_level || "plus_two",
+    gpa: student.gpa == null ? "" : String(student.gpa),
+    expected_gpa: student.expected_gpa == null ? "" : String(student.expected_gpa),
+    preferred_field: student.preferred_field || "",
+    target_countries: student.target_countries || [],
+    goals: student.goals || "",
+  };
+}
 
 /* ── Icons ────────────────────────────────────────────────────────── */
 
@@ -683,43 +738,292 @@ function UploadPromptModal({
 
 /* ── Profile popup ────────────────────────────────────────────────── */
 
-function ProfilePopup({ student, onClose }: { student: StudentOut; onClose: () => void }) {
-  const fields: [string, string | number | null | undefined][] = [
+function ProfilePopup({
+  student,
+  onClose,
+  onSaved,
+  requirePhone = false,
+}: {
+  student: StudentOut;
+  onClose: () => void;
+  onSaved: (student: StudentOut) => void;
+  requirePhone?: boolean;
+}) {
+  const [editing, setEditing] = useState(requirePhone);
+  const [expanded, setExpanded] = useState(false);
+  const [form, setForm] = useState<ProfileFormState>(() => profileFormFromStudent(student));
+  const [errors, setErrors] = useState<Partial<Record<keyof ProfileFormState, string>>>({});
+  const [apiError, setApiError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const initial = (student.full_name || "Y").charAt(0).toUpperCase();
+  const phoneMissing = !student.phone?.trim();
+  const visibleFields: [string, string | number | null | undefined][] = [
     ["Email", student.email],
     ["Phone", student.phone],
     ["Education", student.education_level?.replace(/_/g, " ")],
-    ["GPA", student.gpa],
     ["Target countries", (student.target_countries || []).join(", ")],
-    ["Field of interest", student.preferred_field],
   ];
-  const initial = (student.full_name || "Y").charAt(0).toUpperCase();
+  const expandedFields: [string, string | number | null | undefined][] = [
+    ["City / district", student.location],
+    ["Current GPA", student.gpa],
+    ["Expected GPA", student.expected_gpa],
+    ["Field of interest", student.preferred_field],
+    ["Goals", student.goals],
+  ];
+  const completionCount = [
+    student.full_name,
+    student.phone,
+    student.education_level,
+    student.target_countries?.length,
+    student.preferred_field,
+    student.gpa ?? student.expected_gpa,
+  ].filter(Boolean).length;
+  const completionPct = Math.round((completionCount / 6) * 100);
+  const inputClass =
+    "w-full rounded-md border border-[#E8E5DD] bg-white px-3 py-2.5 text-[13px] font-semibold text-[#1B1916] placeholder:text-[#A8A29A] focus:border-[#0A6E45] focus:outline-none focus:ring-4 focus:ring-[#0A6E45]/12";
+  const labelClass = "mb-1.5 block text-[11px] font-bold uppercase tracking-[0.06em] text-[#6B655C]";
+  const errorClass = "mt-1.5 text-[11px] font-bold text-[#b42318]";
+
+  function setField<K extends keyof ProfileFormState>(field: K, value: ProfileFormState[K]) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: "" }));
+  }
+
+  function toggleCountry(country: string) {
+    setForm((prev) => {
+      const selected = prev.target_countries.includes(country);
+      return {
+        ...prev,
+        target_countries: selected
+          ? prev.target_countries.filter((item) => item !== country)
+          : [...prev.target_countries, country],
+      };
+    });
+    setErrors((prev) => ({ ...prev, target_countries: "" }));
+  }
+
+  function validateProfileForm(): boolean {
+    const next: Partial<Record<keyof ProfileFormState, string>> = {};
+    const gpa = optionalProfileNumber(form.gpa);
+    const expectedGpa = optionalProfileNumber(form.expected_gpa);
+
+    if (!form.full_name.trim()) next.full_name = "Full name is required.";
+    if (!form.phone.trim()) next.phone = "Phone number is required.";
+    if (gpa === undefined || (gpa !== null && (gpa < 0 || gpa > 4.5))) {
+      next.gpa = "Use a GPA between 0 and 4.5.";
+    }
+    if (expectedGpa === undefined || (expectedGpa !== null && (expectedGpa < 0 || expectedGpa > 4.5))) {
+      next.expected_gpa = "Use an expected GPA between 0 and 4.5.";
+    }
+    if (form.target_countries.length === 0) {
+      next.target_countries = "Select at least one target country.";
+    }
+
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
+
+  async function saveProfile(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!validateProfileForm()) return;
+
+    const gpa = optionalProfileNumber(form.gpa);
+    const expectedGpa = optionalProfileNumber(form.expected_gpa);
+    setSaving(true);
+    setApiError("");
+    try {
+      const updated = await updateStudent(student.id, {
+        full_name: form.full_name.trim(),
+        phone: form.phone.trim(),
+        location: form.location.trim() || null,
+        education_level: form.education_level,
+        gpa: gpa === undefined ? null : gpa,
+        expected_gpa: expectedGpa === undefined ? null : expectedGpa,
+        target_countries: form.target_countries,
+        preferred_field: form.preferred_field.trim() || null,
+        goals: form.goals.trim() || null,
+      });
+      onSaved(updated);
+      setEditing(false);
+      setExpanded(true);
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Profile could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <>
-      <div className="upload-modal-overlay" onClick={onClose} />
-      <div className="upload-modal" role="dialog" aria-modal="true">
-        <button type="button" onClick={onClose} aria-label="Close" className="ab-focus absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-lg text-[#8A847B] hover:bg-[#F0EDE4] transition-colors">
-          <CloseIcon />
-        </button>
+      <div
+        className="fixed inset-0 z-[60] bg-[rgba(27,25,22,0.32)] backdrop-blur-[4px]"
+        onClick={requirePhone ? undefined : onClose}
+      />
+      <div
+        className="fixed left-1/2 top-1/2 z-[61] max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-[#EFECE4] bg-white p-[22px] shadow-[var(--shadow-lg)] max-[480px]:w-[calc(100%-20px)] max-[480px]:rounded-xl max-[480px]:p-[18px]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-modal-title"
+      >
+        {!requirePhone && (
+          <button type="button" onClick={onClose} aria-label="Close" className="ab-focus absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-md text-[#8A847B] transition-colors hover:bg-[#F0EDE4]">
+            <CloseIcon />
+          </button>
+        )}
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E11D2A] to-[#7A0D15] text-[16px] font-bold text-white">{initial}</div>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#12244a] text-[16px] font-bold text-white">{initial}</div>
           <div className="min-w-0">
-            <h3 className="text-[16px] font-extrabold tracking-[-0.01em] text-[var(--ab-ink)] truncate">{student.full_name || "Your profile"}</h3>
-            <p className="text-[12px] text-[#8A847B] truncate">{student.email}</p>
+            <h3 id="profile-modal-title" className="truncate text-[16px] font-extrabold tracking-[-0.01em] text-[var(--ab-ink)]">{student.full_name || "Your profile"}</h3>
+            <p className="truncate text-[12px] text-[#8A847B]">{student.email}</p>
           </div>
         </div>
-        <div className="mt-4 space-y-2.5">
-          {fields.map(([label, value]) =>
-            value ? (
-              <div key={label} className="flex items-baseline justify-between gap-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-[#A8A296] shrink-0">{label}</span>
-                <span className="text-[13px] font-medium text-[var(--ab-ink)] text-right capitalize">{String(value)}</span>
+
+        {phoneMissing && (
+          <div className="mt-4 rounded-md border border-[#F5C2BC] bg-[#FFF4F2] px-3 py-2 text-[12px] font-semibold leading-5 text-[#B42318]">
+            Add your phone number to keep using your signed-in profile.
+          </div>
+        )}
+
+        {!editing ? (
+          <>
+            <div className="mt-4 rounded-md border border-[#E8E5DD] bg-[#FAF9F6] px-3 py-3">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#6B655C]">
+                <span>Profile strength</span>
+                <span>{completionPct}%</span>
               </div>
-            ) : null
-          )}
-        </div>
-        <a href="/onboarding/details" className="ab-focus mt-5 block w-full rounded-xl border border-[#E8E5DD] bg-white px-4 py-2.5 text-center text-[13px] font-semibold text-[var(--ab-ink)] transition hover:bg-[#F4F2EC]">
-          Edit my details
-        </a>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#EFECE4]">
+                <div className="h-full rounded-full bg-[#0A6E45]" style={{ width: `${completionPct}%` }} />
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2.5">
+              {visibleFields.map(([label, value]) =>
+                value ? (
+                  <div key={label} className="flex items-baseline justify-between gap-3">
+                    <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-[#A8A296]">{label}</span>
+                    <span className="text-right text-[13px] font-medium capitalize text-[var(--ab-ink)]">{String(value)}</span>
+                  </div>
+                ) : null
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setExpanded((open) => !open)}
+              className="ab-focus mt-4 flex min-h-11 w-full items-center justify-between rounded-md border border-[#E8E5DD] bg-white px-3 text-[12px] font-bold text-[#3F3A33] transition hover:bg-[#F4F2EC]"
+              aria-expanded={expanded}
+            >
+              <span>{expanded ? "Hide full profile" : "Show full profile"}</span>
+              <span className={`transition-transform ${expanded ? "rotate-90" : ""}`}><ArrowRightSm /></span>
+            </button>
+
+            {expanded && (
+              <div className="mt-3 space-y-2.5 rounded-md border border-[#EFECE4] bg-[#FAF9F6] px-3 py-3">
+                {expandedFields.map(([label, value]) =>
+                  value ? (
+                    <div key={label} className="flex items-start justify-between gap-3">
+                      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-[#A8A296]">{label}</span>
+                      <span className="text-right text-[13px] font-medium text-[var(--ab-ink)]">{String(value)}</span>
+                    </div>
+                  ) : null
+                )}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="ab-focus mt-5 flex min-h-11 w-full items-center justify-center rounded-md bg-[#12244a] px-4 text-[13px] font-bold text-white shadow-[var(--shadow-sm)] transition hover:bg-[#1F3D78]"
+            >
+              Edit my details
+            </button>
+          </>
+        ) : (
+          <form onSubmit={saveProfile} className="mt-4 max-h-[68dvh] space-y-4 overflow-y-auto pr-1">
+            <div>
+              <label className={labelClass} htmlFor="profile-full-name">Full name</label>
+              <input id="profile-full-name" className={inputClass} value={form.full_name} onChange={(e) => setField("full_name", e.target.value)} autoComplete="name" />
+              {errors.full_name && <p className={errorClass}>{errors.full_name}</p>}
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="profile-phone">Phone <span className="text-[#b42318]">*</span></label>
+              <input id="profile-phone" type="tel" required className={inputClass} value={form.phone} onChange={(e) => setField("phone", e.target.value)} placeholder="+977 98XXXXXXXX" autoComplete="tel" />
+              {errors.phone && <p className={errorClass}>{errors.phone}</p>}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className={labelClass} htmlFor="profile-location">City / district</label>
+                <input id="profile-location" className={inputClass} value={form.location} onChange={(e) => setField("location", e.target.value)} placeholder="Kathmandu" autoComplete="address-level2" />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="profile-education">Education</label>
+                <select id="profile-education" className={inputClass} value={form.education_level} onChange={(e) => setField("education_level", e.target.value as EducationLevel)}>
+                  {EDUCATION_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="profile-field">Preferred field</label>
+              <input id="profile-field" className={inputClass} value={form.preferred_field} onChange={(e) => setField("preferred_field", e.target.value)} placeholder="Computer Science, Nursing, Business" />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className={labelClass} htmlFor="profile-gpa">Current GPA</label>
+                <input id="profile-gpa" type="number" step="0.01" min="0" max="4.5" className={inputClass} value={form.gpa} onChange={(e) => setField("gpa", e.target.value)} placeholder="3.25" />
+                {errors.gpa && <p className={errorClass}>{errors.gpa}</p>}
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="profile-expected-gpa">Expected GPA</label>
+                <input id="profile-expected-gpa" type="number" step="0.01" min="0" max="4.5" className={inputClass} value={form.expected_gpa} onChange={(e) => setField("expected_gpa", e.target.value)} placeholder="3.60" />
+                {errors.expected_gpa && <p className={errorClass}>{errors.expected_gpa}</p>}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label className={labelClass}>Target countries</label>
+                <span className="text-[11px] font-bold text-[#8A847B]">{form.target_countries.length} selected</span>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {PROFILE_COUNTRY_OPTIONS.map((country) => {
+                  const checked = form.target_countries.includes(country);
+                  return (
+                    <label key={country} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-[12px] font-bold transition ${checked ? "border-[#0A6E45] bg-[#E8F2EC] text-[#1B1916]" : "border-[#E8E5DD] bg-white text-[#6B655C] hover:border-[#B8D8C8]"}`}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleCountry(country)} className="h-4 w-4 rounded border-[#D1CABD] text-[#0A6E45] focus:ring-[#0A6E45]" />
+                      <span>{country}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              {errors.target_countries && <p className={errorClass}>{errors.target_countries}</p>}
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="profile-goals">Goals</label>
+              <textarea id="profile-goals" rows={4} maxLength={1200} className={inputClass} value={form.goals} onChange={(e) => setField("goals", e.target.value)} placeholder="What do you want Abroadly to help you plan?" />
+              <p className="mt-1.5 text-right text-[11px] font-bold text-[#8A847B]">{form.goals.length}/1200</p>
+            </div>
+
+            {apiError && (
+              <div className="rounded-md border border-[#F5C2BC] bg-[#FFF4F2] px-3 py-2 text-[12px] font-bold text-[#B42318]">{apiError}</div>
+            )}
+
+            <div className="sticky bottom-0 -mx-1 flex gap-2 border-t border-[#EFECE4] bg-white px-1 pt-3">
+              {!requirePhone && (
+                <button type="button" onClick={() => { setEditing(false); setForm(profileFormFromStudent(student)); setErrors({}); setApiError(""); }} className="ab-focus min-h-11 rounded-md border border-[#E8E5DD] bg-white px-4 text-[13px] font-bold text-[#6B655C] transition hover:bg-[#F4F2EC]">
+                  Cancel
+                </button>
+              )}
+              <button type="submit" disabled={saving} className="ab-focus min-h-11 flex-1 rounded-md bg-[#0A6E45] px-4 text-[13px] font-bold text-white shadow-[var(--shadow-sm)] transition hover:bg-[#075b39] disabled:cursor-not-allowed disabled:bg-[#A8A29A]">
+                {saving ? "Saving..." : requirePhone ? "Save phone and profile" : "Save changes"}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </>
   );
@@ -815,6 +1119,7 @@ export default function ChatPage() {
   const firstName = useMemo(() => (student?.full_name || "").trim().split(/\s+/)[0] || "", [student]);
   const userInitial = (firstName || "Y").charAt(0).toUpperCase();
   const uploadedCount = documents.length;
+  const phoneRequired = Boolean(student && !student.phone?.trim());
 
   const refreshDocuments = useCallback(async (sid: string) => {
     if (!sid) return;
@@ -841,7 +1146,10 @@ export default function ChatPage() {
       try {
         const s = await getStudent(sid);
         if (!s.profile_completed) { router.replace("/onboarding/details"); return; }
-        if (!cancelled) setStudent(s);
+        if (!cancelled) {
+          setStudent(s);
+          setCallConsented(s.call_consent);
+        }
       } catch {
         router.replace("/onboarding");
         return;
@@ -880,6 +1188,10 @@ export default function ChatPage() {
   }, [docPanelOpen, studentId, refreshDocuments]);
 
   useEffect(() => {
+    if (phoneRequired) setProfileOpen(true);
+  }, [phoneRequired]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, thinking]);
 
@@ -898,6 +1210,10 @@ export default function ChatPage() {
   async function sendMessage(textFromPrompt?: string) {
     const text = (textFromPrompt ?? input).trim();
     if (!text || !studentId || thinking) return;
+    if (phoneRequired) {
+      setProfileOpen(true);
+      return;
+    }
     setInput("");
     requestAnimationFrame(() => {
       if (taRef.current) { taRef.current.style.height = "auto"; taRef.current.focus(); }
@@ -992,6 +1308,10 @@ export default function ChatPage() {
   }
 
   async function grantCounselorCall() {
+    if (phoneRequired) {
+      setProfileOpen(true);
+      return;
+    }
     setCallConsented(true); // optimistic
     try {
       await requestCounselorCall(studentId, student?.phone || undefined);
@@ -1061,8 +1381,10 @@ export default function ChatPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[11.5px] font-semibold text-[#1B1916]">{firstName || "Your profile"}</p>
-                <p className="truncate text-[10px] text-[#8A847B]">
-                  {[student.education_level?.replace(/_/g, " "), (student.target_countries || [])[0]].filter(Boolean).join(" · ") || "Tap to edit"}
+                <p className={`truncate text-[10px] ${phoneRequired ? "font-semibold text-[#B42318]" : "text-[#8A847B]"}`}>
+                  {phoneRequired
+                    ? "Phone required"
+                    : [student.education_level?.replace(/_/g, " "), (student.target_countries || [])[0]].filter(Boolean).join(" · ") || "Tap to edit"}
                 </p>
               </div>
               <ArrowRightSm />
@@ -1433,7 +1755,16 @@ export default function ChatPage() {
       )}
 
       {profileOpen && student && (
-        <ProfilePopup student={student} onClose={() => setProfileOpen(false)} />
+        <ProfilePopup
+          student={student}
+          requirePhone={phoneRequired}
+          onClose={() => setProfileOpen(false)}
+          onSaved={(updated) => {
+            setStudent(updated);
+            setCallConsented(updated.call_consent);
+            setProfileOpen(false);
+          }}
+        />
       )}
     </main>
   );

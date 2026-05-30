@@ -137,7 +137,14 @@ async def update_student(
     if not student:
         raise HTTPException(status_code=404, detail="student_not_found")
 
-    for field, value in payload.model_dump(exclude_none=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    if "phone" in updates:
+        phone = (updates["phone"] or "").strip()
+        if not phone:
+            raise HTTPException(status_code=422, detail="phone_required")
+        updates["phone"] = phone
+
+    for field, value in updates.items():
         setattr(student, field, value)
     student.updated_at = datetime.utcnow()
 

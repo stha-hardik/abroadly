@@ -59,7 +59,7 @@ def test_pure_english_passes_through_unchanged():
         result = _run(default_normalizer.normalize("What documents do I need for a UK student visa?"))
     assert result.normalized == "What documents do I need for a UK student visa?"
     assert result.was_changed is False
-    assert result.source == "llm"  # Still went through the model (which echoed)
+    assert result.source == "english"  # Fast-path skips the model for clear English
 
 
 def test_nepali_romanized_translates():
