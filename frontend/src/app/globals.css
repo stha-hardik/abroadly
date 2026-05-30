@@ -833,6 +833,30 @@ body {
     radial-gradient(40% 40% at 80% 20%, rgba(18, 36, 74, 0.08) 0%, rgba(18, 36, 74, 0) 70%);
 }
 
+/* ── Dashboard panel (integrated inside /chat) ────────────────────────── */
+
+.dash-backdrop {
+  background: rgba(15, 15, 15, 0.42);
+  animation: dash-fade-in 200ms ease-out;
+}
+
+.dash-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@keyframes dash-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dash-slide-in {
+  from { transform: translateX(8%); opacity: 0.7; }
+  to   { transform: translateX(0);   opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
