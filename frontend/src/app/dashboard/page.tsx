@@ -58,7 +58,6 @@ interface DocSlot {
 
 const DOC_SLOTS: DocSlot[] = [
   { id: "grade_sheet", label: "Transcript / grade sheet", hint: "+2 or bachelor's marksheet" },
-  { id: "citizenship", label: "Citizenship", hint: "Nepali citizenship — both sides" },
   { id: "passport", label: "Passport", hint: "Valid for course + 6 months" },
   { id: "ielts", label: "English test", hint: "IELTS / PTE / TOEFL score" },
   { id: "sop", label: "Statement of purpose", hint: "500–1,000 words per university" },
@@ -634,6 +633,87 @@ function DocumentsModule({ documents }: { documents: StudentDocument[] }) {
   );
 }
 
+/* ── Recommendation letters ──────────────────────────────────────────── */
+
+interface LorDraft {
+  id: string;
+  createdAt: string;
+  studentName?: string;
+  program?: string;
+  recommenderName?: string;
+}
+
+function RecommendationLetterModule() {
+  const [drafts, setDrafts] = useState<LorDraft[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("abroadly_lor_letters");
+      if (raw) setDrafts(JSON.parse(raw) as LorDraft[]);
+    } catch {
+      /* ignore parse errors */
+    }
+  }, []);
+
+  return (
+    <section className="mx-auto max-w-3xl">
+      <SectionEyebrow>Recommendation letters</SectionEyebrow>
+      <SectionTitle>Draft a letter in minutes</SectionTitle>
+
+      <Link
+        href="/recommendation-letter"
+        className="ab-focus group mt-5 flex items-center gap-4 rounded-xl border border-[#E8E5DD] bg-white p-4 transition hover:border-[#0A6E45] sm:p-5"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#0A6E45]/10 text-[#0A6E45]">
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+            <path d="M5 3.5h9l5 5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+            <path d="M13.5 3.5V9h5.5M8 13h6M8 16.5h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-bold text-[#1B1916]">Create a recommendation letter</p>
+          <p className="mt-0.5 text-[12.5px] leading-[1.5] text-[#6B655C]">
+            Add your details and your teacher&apos;s, and we&apos;ll compose a clean, modern draft you can share and edit.
+          </p>
+        </div>
+        <span className="shrink-0 text-[#8A847B] transition group-hover:text-[#0A6E45]">
+          <ArrowRight />
+        </span>
+      </Link>
+
+      {drafts.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.05em] text-[#8A847B]">Your drafts</p>
+          <ul className="overflow-hidden rounded-xl border border-[#E8E5DD] bg-white">
+            {drafts.slice(0, 4).map((d, i, arr) => (
+              <li
+                key={d.id}
+                className={`flex items-center gap-3 px-4 py-3 ${i < arr.length - 1 ? "border-b border-[#EFECE4]" : ""}`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold text-[#1B1916]">
+                    {d.studentName || "Untitled draft"}
+                    {d.program ? <span className="font-medium text-[#6B655C]"> · {d.program}</span> : null}
+                  </p>
+                  <p className="truncate text-[11px] text-[#8A847B]">
+                    {d.recommenderName ? `For ${d.recommenderName}` : "Draft"} ·{" "}
+                    {new Date(d.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </p>
+                </div>
+                <Link
+                  href="/recommendation-letter"
+                  className="ab-focus shrink-0 rounded-md border border-[#E8E5DD] bg-white px-3 py-1.5 text-[11.5px] font-semibold text-[#3F3A33] transition hover:border-[#0A6E45] hover:text-[#0A6E45]"
+                >
+                  Open
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /* ── Scholarships ─────────────────────────────────────────────────────── */
 
 function ScholarshipsModule({ country, onSendQuery }: { country: CountryProfile; onSendQuery: (q: string) => void }) {
@@ -886,6 +966,7 @@ export default function DashboardPage() {
           <TimelineModule country={countryProfile} />
           <UniversitiesModule student={student} country={activeCountry} onSendQuery={onSendQuery} />
           <DocumentsModule documents={documents} />
+          <RecommendationLetterModule />
           <ScholarshipsModule country={countryProfile} onSendQuery={onSendQuery} />
           <CostModule country={countryProfile} />
           <RecentChat history={history} />
