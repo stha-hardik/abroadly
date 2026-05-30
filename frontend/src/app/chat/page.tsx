@@ -19,7 +19,6 @@ import {
   type StudentDocument,
   type StudentOut,
 } from "@/lib/api";
-import { DashboardPanel } from "./dashboard-panel";
 
 /* Abroadly's own human counsellor (placeholder identity — operator can edit). */
 const COUNSELOR = {
@@ -268,7 +267,13 @@ function parseAnswer(raw: string): ParsedAnswer {
   if (actionMatch) {
     body = text.slice(0, actionMatch.index).trim();
     for (const line of actionMatch[1].split("\n")) {
-      const cleaned = line.replace(/^\s*[\*\-•]\s*/, "").replace(/^"(.+)"$/, "$1").trim();
+      const cleaned = line
+        .replace(/^\s*[\*\-•]\s*/, "")          // leading bullet
+        .replace(/^"(.+)"$/, "$1")              // surrounding quotes
+        .replace(/\*\*(.+?)\*\*/g, "$1")        // **bold** → bold (chips are plain-text)
+        .replace(/__(.+?)__/g, "$1")            // __bold__ → bold (same)
+        .replace(/\*(.+?)\*/g, "$1")            // *italic* → italic
+        .trim();
       if (cleaned.length > 5) {
         const isUpload = /upload|marksheet|transcript|document|ielts|passport/i.test(cleaned);
         actions.push({ text: cleaned, isUpload });
@@ -742,67 +747,34 @@ export default function ChatPage() {
   const [uploadPrompt, setUploadPrompt] = useState<{ label: string } | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [callConsented, setCallConsented] = useState(false);
-  // Dashboard panel — see ./dashboard-panel.tsx. On lg+, "open=true && collapsed=true" renders
-  // a 56px rail; collapsed=false renders the 360px expanded panel. On mobile, open=true
-  // renders a full-screen drawer. Doc panel and dashboard panel are mutually exclusive on mobile.
-  const [dashboardOpen, setDashboardOpen] = useState(true);
-  const [dashboardCollapsed, setDashboardCollapsed] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
-  // Mobile detection — drives the dashboard panel + doc panel mutual-exclusion behaviour
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 1023px)");
-    const update = () => {
-      setIsMobile(mq.matches);
-      // On mobile, dashboard is always closed by default (open via header button)
-      if (mq.matches) setDashboardOpen(false);
-      else setDashboardOpen(true); // on desktop we always render the rail at minimum
-    };
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
+  // Hold a ref to sendMessage so the URL-deep-link effect (below) can call the
+  // latest version without re-running every time sendMessage's deps change.
+  const sendMessageRef = useRef<((text?: string) => void) | null>(null);
 
-  // Mutual-exclusion helpers (only enforce on mobile — on desktop the rail + doc panel coexist)
-  const openDashboard = useCallback(() => {
-    if (isMobile) setDocPanelOpen(false);
-    setDashboardOpen(true);
-    setDashboardCollapsed(false);
-  }, [isMobile]);
-
-  const closeDashboard = useCallback(() => {
-    if (isMobile) setDashboardOpen(false);
-    else setDashboardCollapsed(true); // collapse to rail rather than disappear
-  }, [isMobile]);
-
-  const toggleDashboardCollapsed = useCallback(() => {
-    setDashboardCollapsed((c) => !c);
-  }, []);
-
-  // Wrap doc panel opener so mobile closes the dashboard drawer first
-  const openDocsExclusive = useCallback(() => {
-    if (isMobile) setDashboardOpen(false);
-    setDocPanelOpen(true);
-  }, [isMobile]);
-
-  // URL deep links — ?panel=dashboard auto-opens the dashboard (used by /dashboard redirect)
+  // URL deep links
+  //   ?docs=open    → opens the document upload panel (existing behaviour)
+  //   ?send=<query> → auto-sends a question on landing (used by /dashboard's
+  //                   "Ask Abroadly" buttons to deep-link a specific prompt into chat)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("panel") === "dashboard") openDashboard();
-    if (params.get("docs") === "open") openDocsExclusive();
-    // Strip the param so refreshes don't re-trigger
-    if (params.get("panel") || params.get("docs")) {
+    if (params.get("docs") === "open") setDocPanelOpen(true);
+    const pendingSend = params.get("send");
+    if (pendingSend) {
+      const q = pendingSend;
+      setTimeout(() => sendMessageRef.current?.(q), 300);
+    }
+    if (params.get("docs") || params.get("send") || params.get("panel")) {
       const next = new URL(window.location.href);
-      next.searchParams.delete("panel");
       next.searchParams.delete("docs");
+      next.searchParams.delete("send");
+      next.searchParams.delete("panel");
       window.history.replaceState({}, "", next.toString());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const firstName = useMemo(() => (student?.full_name || "").trim().split(/\s+/)[0] || "", [student]);
@@ -932,6 +904,9 @@ export default function ChatPage() {
       requestAnimationFrame(() => taRef.current?.focus());
     }
   }
+
+  // Keep the ref in sync — see the ?send= URL-deep-link handler above
+  sendMessageRef.current = sendMessage;
 
   function onKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -1111,20 +1086,10 @@ export default function ChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                // On mobile: opens the drawer. On desktop: opens the rail-as-expanded panel,
-                // or collapses it back to the rail if already expanded.
-                if (isMobile) {
-                  dashboardOpen ? setDashboardOpen(false) : openDashboard();
-                } else {
-                  dashboardCollapsed ? openDashboard() : closeDashboard();
-                }
-              }}
+            <Link
+              href="/dashboard"
               className="ab-focus chat-header-btn flex items-center gap-1.5"
-              title="Your dashboard — progress + document checklist"
-              aria-pressed={dashboardOpen && !dashboardCollapsed}
+              title="Open your full dashboard — to-do, recommended universities, timeline"
             >
               <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none">
                 <rect x="3" y="3" width="6" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
@@ -1133,8 +1098,8 @@ export default function ChatPage() {
                 <rect x="11" y="10" width="6" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
               </svg>
               <span className="hidden sm:inline">Dashboard</span>
-            </button>
-            <button type="button" onClick={openDocsExclusive} className="ab-focus chat-header-btn flex items-center gap-1.5 lg:hidden">
+            </Link>
+            <button type="button" onClick={() => setDocPanelOpen(true)} className="ab-focus chat-header-btn flex items-center gap-1.5 lg:hidden">
               <FolderIcon />
               <span>Docs</span>
               {uploadedCount > 0 && <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-100 px-1 text-[9px] font-bold text-red-700">{uploadedCount}</span>}
@@ -1304,22 +1269,11 @@ export default function ChatPage() {
         </footer>
       </section>
 
-      {/* Dashboard panel — rail on lg+, drawer on mobile. See dashboard-panel.tsx. */}
-      {student && (
-        <DashboardPanel
-          student={student}
-          documents={documents}
-          chatHistory={chatHistory}
-          open={dashboardOpen}
-          collapsed={dashboardCollapsed}
-          isMobile={isMobile}
-          onClose={closeDashboard}
-          onToggleCollapsed={toggleDashboardCollapsed}
-          onSendMessage={(q) => sendMessage(q)}
-          onOpenDocPanel={openDocsExclusive}
-          onScrollChatToBottom={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
-        />
-      )}
+      {/* The dashboard is now a full standalone page at /dashboard — the chat-header
+          link navigates there. The in-chat rail/drawer experiment was removed once the
+          dashboard grew rich enough (universities, courses, timeline, costs) that 360px
+          could no longer hold it comfortably. dashboard-panel.tsx is retained in the
+          repo as a reference but is no longer rendered. */}
 
       <DocumentPanel
         open={docPanelOpen}
