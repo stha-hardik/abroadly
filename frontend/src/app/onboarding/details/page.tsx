@@ -11,6 +11,8 @@ import {
   type StudentOut,
 } from "@/lib/api";
 import { GoogleSignInButton } from "@/app/google-sign-in-button";
+import { NavBar } from "@/app/nav-bar";
+import { SiteFooter } from "@/app/site-footer";
 
 type LoadState = "loading" | "ready" | "signed_out";
 
@@ -59,11 +61,34 @@ const COUNTRY_OPTIONS = [
   "Ireland",
 ];
 
+const WHY_ITEMS: { title: string; body: string }[] = [
+  {
+    title: "Tailored answers",
+    body: "GPA and expected GPA let Abroadly tell you which programs are realistic — not generic advice.",
+  },
+  {
+    title: "Country-specific guidance",
+    body: "Visa, cost, and document answers change a lot by country. Picking yours unlocks the right details.",
+  },
+  {
+    title: "Asked once",
+    body: "Saved to your Google-verified email, reused on every future answer. You'll never re-enter this.",
+  },
+];
+
 function optionalNumber(value: string): number | undefined {
   if (value.trim() === "") return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
+
+/* ── Shared form-control styling (Notion-style: hairline border, emerald focus,
+ *    44px height, generous padding). Used by every input/textarea below. */
+const INPUT_CLS =
+  "w-full rounded-lg border border-[var(--ab-line)] bg-white px-3.5 py-2.5 text-[14px] font-medium text-[var(--ab-ink)] placeholder:text-[#A8A296] transition focus:border-[var(--ab-brand)] focus:outline-none focus:ring-4 focus:ring-[rgba(10,110,69,0.12)]";
+const LABEL_CLS = "mb-1.5 block text-[13px] font-semibold text-[var(--ab-ink)]";
+const HELP_CLS = "mt-1.5 text-[11.5px] text-[var(--ab-muted-soft)]";
+const ERROR_CLS = "mt-1.5 text-[12px] font-semibold text-[#B91722]";
 
 export default function ProfileDetailsPage() {
   const router = useRouter();
@@ -107,17 +132,18 @@ export default function ProfileDetailsPage() {
     };
   }, [router]);
 
-  const progress = useMemo(() => {
-    const checks = [
+  const sectionsComplete = useMemo(() => {
+    return [
       form.full_name.trim(),
       form.phone.trim(),
       form.education_level,
       form.gpa.trim() || form.expected_gpa.trim(),
       form.target_countries.length > 0,
       form.preferred_field.trim(),
-    ];
-    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+    ].filter(Boolean).length;
   }, [form]);
+  const totalSections = 6;
+  const progressPct = Math.round((sectionsComplete / totalSections) * 100);
 
   function setField<K extends keyof ProfileForm>(field: K, value: ProfileForm[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -190,18 +216,15 @@ export default function ProfileDetailsPage() {
     }
   }
 
-  const inputClass =
-    "w-full rounded-md border border-[#E8E5DD] bg-white px-4 py-3 text-sm font-bold text-[#1B1916] placeholder:text-[#A8A29A] focus:border-[#365CC4] focus:outline-none focus:ring-4 focus:ring-[#365CC4]/12";
-  const labelClass = "mb-2 block text-sm font-black text-[#24314a]";
-  const errorClass = "mt-2 text-xs font-bold text-[#b42318]";
-
+  /* ── Loading state — minimal centered card with shared design language */
   if (loadState === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#FAF9F6] px-5 text-[#1B1916]">
-        <section className="w-full max-w-md rounded-lg border border-[#E8E5DD] bg-white p-7 text-center shadow-sm">
-          <div className="mx-auto h-11 w-11 animate-pulse rounded-md bg-[#dce7f8]" />
-          <h1 className="mt-5 text-2xl font-black">Checking your Google session</h1>
-          <p className="mt-3 text-sm font-semibold text-[#647086]">
+      <main className="min-h-screen bg-[var(--ab-paper)] text-[var(--ab-ink)]">
+        <NavBar showSignIn={false} primary={{ href: "/chat", label: "Open chat" }} />
+        <section className="mx-auto flex max-w-md flex-col items-center px-5 py-24 text-center sm:px-8 sm:py-32">
+          <div className="h-11 w-11 animate-pulse rounded-xl bg-[var(--ab-line)]" />
+          <h1 className="ab-h1 mt-6">Checking your session</h1>
+          <p className="ab-body mt-3 text-[14px]">
             Preparing your student profile.
           </p>
         </section>
@@ -209,301 +232,308 @@ export default function ProfileDetailsPage() {
     );
   }
 
+  /* ── Signed-out state */
   if (loadState === "signed_out") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#FAF9F6] px-5 text-[#1B1916]">
-        <section className="w-full max-w-md rounded-lg border border-[#E8E5DD] bg-white p-7 shadow-sm">
-          <Link href="/" className="ab-focus flex items-center gap-3 rounded-md">
-            <img
-              src="/images/abroadly-logo.png"
-              alt="Abroadly"
-              className="h-9 w-9 rounded-md"
-            />
-            <span className="text-lg font-black">Abroadly</span>
-          </Link>
-          <h1 className="mt-7 text-2xl font-black">Google sign-in is required</h1>
-          <p className="mt-3 text-sm leading-6 text-[#647086]">
-            Sign in first so Abroadly can save this profile to your verified email.
-          </p>
-          <GoogleSignInButton
-            variant="outline"
-            label="Continue with Google"
-            className="mt-6 w-full justify-start py-4"
-          />
+      <main className="min-h-screen bg-[var(--ab-paper)] text-[var(--ab-ink)]">
+        <NavBar showSignIn={false} primary={{ href: "/chat", label: "Open chat" }} />
+        <section className="ab-dot-grid relative">
+          <div className="mx-auto max-w-md px-5 py-24 text-center sm:px-8 sm:py-32">
+            <p className="ab-eyebrow">Sign-in required</p>
+            <h1 className="ab-display-2 mt-3">Continue with Google to begin.</h1>
+            <p className="ab-subhead mt-4">
+              Sign in first so Abroadly can save this profile to your verified email.
+            </p>
+            <div className="mx-auto mt-8 max-w-sm rounded-2xl border border-[var(--ab-line)] bg-white p-6 shadow-[var(--shadow-md)]">
+              <GoogleSignInButton
+                variant="outline"
+                label="Continue with Google"
+                className="w-full justify-start"
+              />
+            </div>
+          </div>
         </section>
+        <SiteFooter />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#FAF9F6] text-[#1B1916]">
-      <header className="border-b border-[#E8E5DD] bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-          <Link href="/" className="ab-focus flex items-center gap-3 rounded-md">
-            <img
-              src="/images/abroadly-logo.png"
-              alt="Abroadly"
-              className="h-9 w-9 rounded-md"
-            />
-            <span className="text-lg font-black">Abroadly</span>
-          </Link>
-          <span className="rounded-md border border-[#dce3ef] bg-[#F4F2EC] px-3 py-2 text-xs font-black text-[#546176]">
-            Verified Google email
-          </span>
+    <main className="min-h-screen bg-[var(--ab-paper)] text-[var(--ab-ink)] pb-24">
+      <NavBar showSignIn={false} primary={{ href: "/chat", label: "Open chat" }} />
+
+      {/* ── Hero (light, focused) ────────────────────────────────────── */}
+      <section className="ab-dot-grid relative overflow-hidden">
+        <div className="mx-auto max-w-3xl px-5 pb-10 pt-14 text-center sm:px-8 sm:pt-20 sm:pb-14">
+          <p className="ab-eyebrow ab-fade-up ab-d1 justify-center inline-flex">One-time profile</p>
+          <h1 className="ab-fade-up ab-d2 ab-display-2 mx-auto mt-4 max-w-2xl">
+            Tell us where you&apos;re heading.
+          </h1>
+          <p className="ab-fade-up ab-d3 ab-subhead mx-auto mt-4 max-w-xl">
+            About 60 seconds. Saved to {student?.email || "your verified email"} — Abroadly
+            will skip this screen on every future sign-in.
+          </p>
+
+          {/* Progress */}
+          <div className="ab-fade-up ab-d4 mx-auto mt-7 max-w-xs">
+            <div className="flex items-baseline justify-between text-[12px] font-semibold text-[var(--ab-muted)]">
+              <span>{sectionsComplete} of {totalSections} sections</span>
+              <span className="font-mono text-[11px] text-[var(--ab-muted-soft)]">{progressPct}%</span>
+            </div>
+            <div className="mt-1.5 h-1 rounded-full bg-[var(--ab-line-soft)] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[var(--ab-brand)] transition-all duration-300"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
         </div>
-      </header>
-
-      <section className="mx-auto grid max-w-7xl gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[0.72fr_1.28fr] lg:py-12">
-        <aside className="lg:sticky lg:top-8">
-          <div className="rounded-lg bg-[#12244a] p-6 text-white shadow-[0_24px_70px_rgba(18,36,74,0.22)]">
-            <p className="text-xs font-black uppercase text-[#7DDBB1]">
-              One-time student profile
-            </p>
-            <h1 className="mt-3 text-3xl font-black leading-tight">
-              Add the context Abroadly needs before chat starts.
-            </h1>
-            <p className="mt-4 text-sm leading-7 text-white/74">
-              The profile is saved to {student?.email}. Once complete, Abroadly will
-              skip this screen on future sign-ins.
-            </p>
-
-            <div className="mt-7">
-              <div className="flex items-center justify-between text-xs font-black text-white/72">
-                <span>Profile readiness</span>
-                <span>{progress}%</span>
-              </div>
-              <div className="mt-2 h-2 rounded-full bg-white/14">
-                <div
-                  className="h-2 rounded-full bg-[#7DDBB1] transition-all"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="mt-7 grid gap-3 text-sm font-bold text-white/86">
-              <div className="rounded-md border border-white/14 bg-white/8 px-4 py-3">
-                GPA and expected GPA help eligibility answers.
-              </div>
-              <div className="rounded-md border border-white/14 bg-white/8 px-4 py-3">
-                Country choices shape visa, cost, and document guidance.
-              </div>
-              <div className="rounded-md border border-white/14 bg-white/8 px-4 py-3">
-                Your email comes from Google, not a typed form.
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-lg border border-[#E8E5DD] bg-white p-5 shadow-sm sm:p-7"
-        >
-          <div className="flex flex-col gap-4 border-b border-[#EFECE4] pb-6 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase text-[#365CC4]">
-                Profile details
-              </p>
-              <h2 className="mt-2 text-2xl font-black">Tell us where you are heading.</h2>
-            </div>
-            <div className="rounded-md bg-[#E8F2EC] px-3 py-2 text-xs font-black text-[#0A6E45]">
-              Asked once
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className={labelClass} htmlFor="full_name">
-                Full name
-              </label>
-              <input
-                id="full_name"
-                className={inputClass}
-                value={form.full_name}
-                onChange={(e) => setField("full_name", e.target.value)}
-                placeholder="Your full legal name"
-              />
-              {errors.full_name && <p className={errorClass}>{errors.full_name}</p>}
-            </div>
-
-            <div>
-              <label className={labelClass} htmlFor="phone">
-                Phone <span className="text-[#b42318]">*</span>
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                required
-                autoComplete="tel"
-                className={inputClass}
-                value={form.phone}
-                onChange={(e) => setField("phone", e.target.value)}
-                placeholder="+977 98XXXXXXXX"
-              />
-              {errors.phone && <p className={errorClass}>{errors.phone}</p>}
-            </div>
-
-            <div>
-              <label className={labelClass} htmlFor="location">
-                City or district
-              </label>
-              <input
-                id="location"
-                className={inputClass}
-                value={form.location}
-                onChange={(e) => setField("location", e.target.value)}
-                placeholder="Kathmandu"
-              />
-            </div>
-
-            <div>
-              <label className={labelClass} htmlFor="education_level">
-                Education level
-              </label>
-              <select
-                id="education_level"
-                className={inputClass}
-                value={form.education_level}
-                onChange={(e) => setField("education_level", e.target.value as EducationLevel)}
-              >
-                {EDUCATION_OPTIONS.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className={labelClass} htmlFor="preferred_field">
-                Preferred field
-              </label>
-              <input
-                id="preferred_field"
-                className={inputClass}
-                value={form.preferred_field}
-                onChange={(e) => setField("preferred_field", e.target.value)}
-                placeholder="Computer Science, Nursing, Business"
-              />
-            </div>
-
-            <div>
-              <label className={labelClass} htmlFor="gpa">
-                Current GPA
-              </label>
-              <input
-                id="gpa"
-                type="number"
-                step="0.01"
-                min="0"
-                max="4.5"
-                className={inputClass}
-                value={form.gpa}
-                onChange={(e) => setField("gpa", e.target.value)}
-                placeholder="3.25"
-              />
-              {errors.gpa && <p className={errorClass}>{errors.gpa}</p>}
-            </div>
-
-            <div>
-              <label className={labelClass} htmlFor="expected_gpa">
-                Expected GPA
-              </label>
-              <input
-                id="expected_gpa"
-                type="number"
-                step="0.01"
-                min="0"
-                max="4.5"
-                className={inputClass}
-                value={form.expected_gpa}
-                onChange={(e) => setField("expected_gpa", e.target.value)}
-                placeholder="3.60"
-              />
-              {errors.expected_gpa && (
-                <p className={errorClass}>{errors.expected_gpa}</p>
-              )}
-            </div>
-
-            <div className="sm:col-span-2">
-              <div className="mb-3 flex items-end justify-between gap-4">
-                <label className="block text-sm font-black text-[#24314a]">
-                  Interested countries
-                </label>
-                <span className="text-xs font-bold text-[#8A847B]">
-                  {form.target_countries.length} selected
-                </span>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {COUNTRY_OPTIONS.map((country) => {
-                  const checked = form.target_countries.includes(country);
-                  return (
-                    <label
-                      key={country}
-                      className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm font-black transition ${
-                        checked
-                          ? "border-[#365CC4] bg-[#EEF1FA] text-[#1B1916]"
-                          : "border-[#dce3ef] bg-white text-[#48556a] hover:border-[#aab8cf]"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleCountry(country)}
-                        className="h-4 w-4 rounded border-[#b7c2d4] text-[#365CC4] focus:ring-[#365CC4]"
-                      />
-                      <span>{country}</span>
-                    </label>
-                  );
-                })}
-              </div>
-              {errors.target_countries && (
-                <p className={errorClass}>{errors.target_countries}</p>
-              )}
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={labelClass} htmlFor="goals">
-                Goals
-              </label>
-              <textarea
-                id="goals"
-                rows={5}
-                maxLength={1200}
-                className={inputClass}
-                value={form.goals}
-                onChange={(e) => setField("goals", e.target.value)}
-                placeholder="Example: I want to study Nursing in Australia and understand the safest next steps for documents, budget, and visa planning."
-              />
-              <div className="mt-2 flex items-center justify-between text-xs font-bold text-[#8A847B]">
-                <span>Optional, but useful for better replies.</span>
-                <span>{form.goals.length}/1200</span>
-              </div>
-            </div>
-          </div>
-
-          {apiError && (
-            <div className="mt-6 rounded-md border border-[#f5c2bc] bg-[#fff4f2] px-4 py-3 text-sm font-bold text-[#b42318]">
-              {apiError}
-            </div>
-          )}
-
-          <div className="mt-7 flex flex-col-reverse gap-3 border-t border-[#EFECE4] pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <Link
-              href="/onboarding"
-              className="ab-focus rounded-md border border-[#E8E5DD] bg-white px-5 py-3 text-center text-sm font-black text-[#344158] transition hover:border-[#365CC4]"
-            >
-              Back
-            </Link>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="ab-focus rounded-md bg-[#12244a] px-6 py-3 text-sm font-black text-white shadow-[0_14px_32px_rgba(18,36,74,0.2)] transition hover:-translate-y-0.5 hover:bg-[#1F3D78] disabled:cursor-not-allowed disabled:bg-[#A8A29A]"
-            >
-              {submitting ? "Saving profile" : "Save profile and open chat"}
-            </button>
-          </div>
-        </form>
       </section>
+
+      {/* ── Form + Why-we-ask rail ───────────────────────────────────── */}
+      <section className="border-t border-[var(--ab-line)] bg-white">
+        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:px-8 sm:py-16 lg:grid-cols-[1.4fr_0.6fr] lg:gap-14">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="min-w-0">
+            {/* Section: Who you are */}
+            <fieldset>
+              <legend className="ab-eyebrow mb-5">Who you are</legend>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className={LABEL_CLS} htmlFor="full_name">Full name</label>
+                  <input
+                    id="full_name"
+                    className={INPUT_CLS}
+                    value={form.full_name}
+                    onChange={(e) => setField("full_name", e.target.value)}
+                    placeholder="Your full legal name"
+                  />
+                  {errors.full_name && <p className={ERROR_CLS}>{errors.full_name}</p>}
+                </div>
+
+                <div>
+                  <label className={LABEL_CLS} htmlFor="phone">Phone <span className="text-[#B91722]">*</span></label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    required
+                    autoComplete="tel"
+                    className={INPUT_CLS}
+                    value={form.phone}
+                    onChange={(e) => setField("phone", e.target.value)}
+                    placeholder="+977 98XXXXXXXX"
+                  />
+                  {errors.phone && <p className={ERROR_CLS}>{errors.phone}</p>}
+                </div>
+
+                <div>
+                  <label className={LABEL_CLS} htmlFor="location">City or district</label>
+                  <input
+                    id="location"
+                    className={INPUT_CLS}
+                    value={form.location}
+                    onChange={(e) => setField("location", e.target.value)}
+                    placeholder="Kathmandu"
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            {/* Section: Academic */}
+            <fieldset className="mt-12 border-t border-[var(--ab-line-soft)] pt-12">
+              <legend className="ab-eyebrow mb-5">Academic</legend>
+
+              <div>
+                <label className={LABEL_CLS}>Education level</label>
+                <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-[var(--ab-line-soft)] bg-[var(--ab-paper)] p-1 sm:grid-cols-5">
+                  {EDUCATION_OPTIONS.map((opt) => {
+                    const active = form.education_level === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setField("education_level", opt.value)}
+                        className={`ab-focus rounded-lg px-3 py-2 text-[13px] font-semibold transition ${
+                          active
+                            ? "bg-white text-[var(--ab-ink)] shadow-[var(--shadow-xs)]"
+                            : "text-[var(--ab-muted)] hover:text-[var(--ab-ink)]"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className={LABEL_CLS} htmlFor="preferred_field">Preferred field</label>
+                  <input
+                    id="preferred_field"
+                    className={INPUT_CLS}
+                    value={form.preferred_field}
+                    onChange={(e) => setField("preferred_field", e.target.value)}
+                    placeholder="Computer Science, Nursing, Business…"
+                  />
+                </div>
+
+                <div>
+                  <label className={LABEL_CLS} htmlFor="gpa">Current GPA</label>
+                  <input
+                    id="gpa"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="4.5"
+                    className={INPUT_CLS}
+                    value={form.gpa}
+                    onChange={(e) => setField("gpa", e.target.value)}
+                    placeholder="3.25"
+                  />
+                  <p className={HELP_CLS}>0 – 4.5 scale.</p>
+                  {errors.gpa && <p className={ERROR_CLS}>{errors.gpa}</p>}
+                </div>
+
+                <div>
+                  <label className={LABEL_CLS} htmlFor="expected_gpa">Expected GPA</label>
+                  <input
+                    id="expected_gpa"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="4.5"
+                    className={INPUT_CLS}
+                    value={form.expected_gpa}
+                    onChange={(e) => setField("expected_gpa", e.target.value)}
+                    placeholder="3.60"
+                  />
+                  <p className={HELP_CLS}>Where you think you&apos;ll finish.</p>
+                  {errors.expected_gpa && <p className={ERROR_CLS}>{errors.expected_gpa}</p>}
+                </div>
+              </div>
+            </fieldset>
+
+            {/* Section: Goals & countries */}
+            <fieldset className="mt-12 border-t border-[var(--ab-line-soft)] pt-12">
+              <legend className="ab-eyebrow mb-5">Goals &amp; countries</legend>
+
+              <div>
+                <div className="mb-2 flex items-end justify-between gap-4">
+                  <label className={LABEL_CLS}>Interested countries</label>
+                  <span className="text-[11.5px] font-semibold text-[var(--ab-muted-soft)]">
+                    {form.target_countries.length} selected
+                  </span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {COUNTRY_OPTIONS.map((country) => {
+                    const checked = form.target_countries.includes(country);
+                    return (
+                      <button
+                        key={country}
+                        type="button"
+                        onClick={() => toggleCountry(country)}
+                        className={`ab-focus flex min-h-11 items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-[13.5px] font-semibold transition ${
+                          checked
+                            ? "border-[var(--ab-brand)] bg-[#E8F2EC] text-[var(--ab-ink)]"
+                            : "border-[var(--ab-line)] bg-white text-[var(--ab-ink-soft)] hover:border-[#D8D3C8]"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                            checked ? "border-[var(--ab-brand)] bg-[var(--ab-brand)] text-white" : "border-[var(--ab-line)] bg-white"
+                          }`}
+                          aria-hidden
+                        >
+                          {checked && (
+                            <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none">
+                              <path d="M2.5 6.5l2.5 2 4.5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </span>
+                        <span>{country}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.target_countries && (
+                  <p className={ERROR_CLS}>{errors.target_countries}</p>
+                )}
+              </div>
+
+              <div className="mt-6">
+                <label className={LABEL_CLS} htmlFor="goals">Goals</label>
+                <textarea
+                  id="goals"
+                  rows={5}
+                  maxLength={1200}
+                  className={INPUT_CLS}
+                  value={form.goals}
+                  onChange={(e) => setField("goals", e.target.value)}
+                  placeholder="Example: I want to study Nursing in Australia. I'm worried about budget and visa documents."
+                />
+                <div className="mt-1.5 flex items-center justify-between text-[11.5px] font-medium text-[var(--ab-muted-soft)]">
+                  <span>Optional — but it sharpens the first answer.</span>
+                  <span className="font-mono">{form.goals.length}/1200</span>
+                </div>
+              </div>
+            </fieldset>
+
+            {apiError && (
+              <div className="mt-8 rounded-xl border border-red-100 bg-red-50/80 px-4 py-3 text-[13px] font-medium text-[#B91722]">
+                {apiError}
+              </div>
+            )}
+
+            <div className="mt-10 flex flex-col-reverse gap-3 border-t border-[var(--ab-line-soft)] pt-8 sm:flex-row sm:items-center sm:justify-between">
+              <Link
+                href="/onboarding"
+                className="ab-focus ab-btn ab-btn-ghost"
+              >
+                Back
+              </Link>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="ab-focus ab-btn ab-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? "Saving…" : "Save profile and open chat"}
+              </button>
+            </div>
+          </form>
+
+          {/* Right rail — Why we ask (desktop only) */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-24">
+              <p className="ab-eyebrow">Why we ask</p>
+              <h2 className="ab-h2 mt-3">Every field earns its place.</h2>
+              <p className="ab-body mt-3 text-[14px] leading-7">
+                We collect the minimum that makes the AI genuinely useful — nothing
+                more. Each item maps to a specific answer it can give later.
+              </p>
+              <ul className="mt-7 space-y-5">
+                {WHY_ITEMS.map((it) => (
+                  <li key={it.title}>
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#E8F2EC] text-[var(--ab-brand)]">
+                        <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none">
+                          <path d="M2.5 6.5l2.5 2 4.5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                      <div>
+                        <p className="text-[13px] font-bold text-[var(--ab-ink)]">{it.title}</p>
+                        <p className="text-[12.5px] leading-6 text-[var(--ab-muted)] mt-1">{it.body}</p>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <SiteFooter />
     </main>
   );
 }

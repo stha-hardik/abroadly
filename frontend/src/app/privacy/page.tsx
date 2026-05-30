@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavBar } from "../nav-bar";
 import { SiteFooter } from "../site-footer";
 
 export const metadata = {
@@ -110,39 +110,24 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <main className="min-h-screen bg-[#FAF9F6] text-[#1B1916]">
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
-        <Link href="/" className="ab-focus flex items-center gap-3 rounded-md">
-          <img src="/images/abroadly-logo.png" alt="Abroadly" className="h-9 w-9 rounded-md" />
-          <span className="text-lg font-black">Abroadly</span>
-        </Link>
-        <Link
-          href="/chat"
-          className="ab-focus rounded-md border border-[#E8E5DD] bg-white px-4 py-2 text-sm font-black text-[#1B1916] transition hover:border-[#A8A29A]"
-        >
-          Open chat
-        </Link>
-      </header>
+    <main className="min-h-screen bg-[var(--ab-paper)] text-[var(--ab-ink)]">
+      <NavBar showSignIn={false} primary={{ href: "/chat", label: "Open chat" }} />
 
-      <article className="mx-auto max-w-3xl px-5 pb-20 pt-6 sm:px-8 lg:pt-10">
-        <p className="text-xs font-black uppercase tracking-normal text-[#365CC4]">
-          Legal
-        </p>
-        <h1 className="mt-3 text-3xl font-bold leading-[1.1] tracking-[-0.02em] sm:text-4xl">
-          Privacy Policy
-        </h1>
-        <p className="mt-3 text-sm text-[#6B655C]">
-          Last updated: 28 May 2026
-        </p>
-        <p className="mt-6 text-base leading-7 text-[#6B655C]">
-          Plain English summary: we keep what you give us, use it only to help you study abroad, don't sell or share it with consultancies, and delete it when you ask.
+      <article className="mx-auto max-w-2xl px-5 pb-24 pt-12 sm:px-8 sm:pt-16">
+        <p className="ab-eyebrow">Legal</p>
+        <h1 className="ab-display-2 mt-3">Privacy Policy</h1>
+        <p className="ab-small mt-3 text-[var(--ab-muted-soft)]">Last updated: 28 May 2026</p>
+        <p className="ab-subhead mt-6">
+          Plain English summary: we keep what you give us, use it only to help you
+          study abroad, don&apos;t sell or share it with consultancies, and delete it
+          when you ask.
         </p>
 
-        <div className="mt-10 space-y-10">
+        <div className="mt-12 space-y-12">
           {sections.map((section) => (
             <section key={section.heading}>
-              <h2 className="text-xl font-black text-[#1B1916]">{section.heading}</h2>
-              <div className="mt-3 space-y-3 text-sm leading-7 text-[#6B655C]">
+              <h2 className="ab-h2">{section.heading}</h2>
+              <div className="ab-body mt-4 space-y-4 text-[15px] leading-[1.75]">
                 {section.body.map((para, i) => (
                   <p key={i}>{para}</p>
                 ))}
