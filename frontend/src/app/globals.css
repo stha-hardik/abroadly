@@ -648,18 +648,21 @@ body {
   justify-content: center;
   gap: 8px;
   width: 100%;
+  min-height: 44px;
   padding: 11px 16px;
-  border-radius: 12px;
-  background: #E11D2A;
+  border-radius: 10px;
+  border: 1px solid rgba(10, 110, 69, 0.92);
+  background: #0A6E45;
   color: #fff;
   font-size: 13px;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(225, 29, 42, 0.28);
-  transition: all 0.15s ease;
+  box-shadow: 0 8px 18px rgba(10, 110, 69, 0.22);
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 .counselor-call-btn:hover {
-  background: #C0121F;
+  background: #075B39;
   transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(10, 110, 69, 0.26);
 }
 
 /* ── Document panel ────────────────────────────────────────────────── */
