@@ -5,7 +5,7 @@ import { googleLoginUrl } from "@/lib/api";
 
 /* Hero call-to-action: pick a degree + country, then sign in with Google.
  * The choice is stashed in localStorage so onboarding can pre-fill it.
- * Light-theme styling — sits on the warm paper hero. */
+ * Dark-hero styling — sits on the navy hero band. */
 
 const DEGREES = ["Bachelor's", "Master's", "PhD", "MBA", "Diploma"];
 
@@ -21,7 +21,7 @@ function Chevron() {
     <svg
       viewBox="0 0 12 12"
       aria-hidden="true"
-      className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--ab-muted)]"
+      className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-white/55"
       fill="none"
     >
       <path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -41,7 +41,9 @@ function GoogleMark() {
 }
 
 const selectClass =
-  "ab-focus cursor-pointer appearance-none rounded-xl border border-[var(--ab-line)] bg-white py-2.5 pl-3.5 pr-9 text-[15px] font-bold tracking-[-0.01em] text-[var(--ab-ink)] shadow-[var(--shadow-xs)] transition hover:border-[#D8D3C8] focus:border-[var(--ab-brand)] sm:text-[16px]";
+  "ab-focus cursor-pointer appearance-none rounded-xl border border-white/15 bg-white/[0.07] py-2.5 pl-4 pr-10 text-[16px] font-bold text-white transition hover:border-white/35 focus:border-[#F2682C] sm:text-[17px]";
+
+const OPTION_CLASS = "bg-[#15294C] text-white";
 
 export function HeroIntentForm() {
   const [degree, setDegree] = useState("");
@@ -59,30 +61,30 @@ export function HeroIntentForm() {
   };
 
   return (
-    <div className="flex w-full flex-col items-start gap-5">
+    <div className="flex w-full flex-col items-center gap-7">
       {/* selector sentence */}
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2.5 text-[16px] font-semibold text-[var(--ab-ink-soft)] sm:text-[17px]">
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-3 text-[17px] font-semibold text-white/90 sm:text-[19px]">
         <span>I want to study</span>
 
         <div className="relative">
           <label className="sr-only" htmlFor="hero-degree">Degree</label>
           <select id="hero-degree" value={degree} onChange={(e) => setDegree(e.target.value)} className={selectClass}>
-            <option value="" disabled>Select degree</option>
+            <option value="" disabled className={OPTION_CLASS}>Select degree</option>
             {DEGREES.map((d) => (
-              <option key={d} value={d}>{d}</option>
+              <option key={d} value={d} className={OPTION_CLASS}>{d}</option>
             ))}
           </select>
           <Chevron />
         </div>
 
-        <span className="text-[var(--ab-muted)]">in</span>
+        <span className="text-white/55">in</span>
 
         <div className="relative">
           <label className="sr-only" htmlFor="hero-country">Country</label>
           <select id="hero-country" value={country} onChange={(e) => setCountry(e.target.value)} className={selectClass}>
-            <option value="" disabled>Select country</option>
+            <option value="" disabled className={OPTION_CLASS}>Select country</option>
             {COUNTRIES.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
+              <option key={c.value} value={c.value} className={OPTION_CLASS}>{c.label}</option>
             ))}
           </select>
           <Chevron />
@@ -93,13 +95,13 @@ export function HeroIntentForm() {
       <button
         type="button"
         onClick={start}
-        className="ab-focus inline-flex items-center gap-2.5 rounded-xl bg-[var(--ab-ink)] py-3 pl-3 pr-6 text-[15px] font-extrabold text-white shadow-[var(--shadow-sm)] transition hover:-translate-y-0.5 hover:bg-black active:translate-y-0"
+        className="ab-focus inline-flex items-center gap-2.5 rounded-xl bg-[#F2682C] py-3.5 pl-3 pr-6 text-[15px] font-extrabold text-white shadow-[0_14px_34px_-10px_rgba(242,104,44,0.65)] transition hover:-translate-y-0.5 hover:bg-[#E55A1F] active:translate-y-0"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white">
           <GoogleMark />
         </span>
         Find my fit
-        <span className="font-semibold text-white/65">· free</span>
+        <span className="font-semibold text-white/75">· free</span>
       </button>
     </div>
   );

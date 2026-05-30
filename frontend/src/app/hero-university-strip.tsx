@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 
-/* Quiet, Notion-style trust strip — real universities our guidance covers.
- * Grayscale favicons (with a clean monogram fallback), warming to colour on hover. */
+/* Quiet trust strip for the dark hero — real universities our guidance covers.
+ * Each logo sits in a small white chip so the favicon reads on the navy. */
 
 const UNIS: { name: string; domain: string }[] = [
   { name: "Oxford", domain: "ox.ac.uk" },
@@ -18,30 +18,32 @@ const UNIS: { name: string; domain: string }[] = [
 function UniItem({ name, domain }: { name: string; domain: string }) {
   const [failed, setFailed] = useState(false);
   return (
-    <span className="group inline-flex items-center gap-2 opacity-75 transition hover:opacity-100">
-      {failed ? (
-        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--ab-paper-2)] text-[10px] font-extrabold text-[var(--ab-muted)]">
-          {name[0]}
-        </span>
-      ) : (
-        <img
-          src={`https://icons.duckduckgo.com/ip3/${domain}.ico`}
-          alt=""
-          width={22}
-          height={22}
-          loading="lazy"
-          onError={() => setFailed(true)}
-          className="h-[22px] w-[22px] rounded-[5px] object-contain grayscale transition duration-200 group-hover:grayscale-0"
-        />
-      )}
-      <span className="text-[13.5px] font-semibold tracking-[-0.01em] text-[var(--ab-muted)]">{name}</span>
+    <span className="group inline-flex items-center gap-2 transition">
+      <span className="flex h-[26px] w-[26px] items-center justify-center rounded-md bg-white shadow-[0_1px_3px_rgba(0,0,0,0.18)]">
+        {failed ? (
+          <span className="text-[11px] font-extrabold text-[#12244a]">{name[0]}</span>
+        ) : (
+          <img
+            src={`https://icons.duckduckgo.com/ip3/${domain}.ico`}
+            alt=""
+            width={16}
+            height={16}
+            loading="lazy"
+            onError={() => setFailed(true)}
+            className="h-4 w-4 object-contain"
+          />
+        )}
+      </span>
+      <span className="text-[13px] font-semibold tracking-[-0.01em] text-white/55 transition group-hover:text-white/85">
+        {name}
+      </span>
     </span>
   );
 }
 
 export function HeroUniversityStrip() {
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-3.5">
+    <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
       {UNIS.map((u) => (
         <UniItem key={u.domain} {...u} />
       ))}
