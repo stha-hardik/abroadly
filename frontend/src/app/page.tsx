@@ -150,37 +150,35 @@ export default function Home() {
             <svg viewBox="0 0 16 16" aria-hidden className="h-3.5 w-3.5 text-[#FFB37A]" fill="currentColor">
               <path d="M8 0l1.6 4.9L14.4 6 9.6 7.1 8 12 6.4 7.1 1.6 6l4.8-1.1L8 0z" />
             </svg>
-            AI powered
+            Built for students in Nepal
           </span>
 
           <h1 className="ab-fade-up ab-d2 ab-display-1 mt-7 text-white">
             DIY your <span className="text-[#FF7A3D]">academic</span> journey
           </h1>
 
-          <div className="ab-fade-up ab-d4 mt-10 w-full">
+          <p className="ab-fade-up ab-d3 mt-5 max-w-xl text-[15px] leading-[1.65] text-white/70 sm:text-[16px]">
+            AI-guided answers on eligibility, documents, scholarships, and visas — grounded in
+            official sources, not an agency&apos;s sales pitch.
+          </p>
+
+          <div className="ab-fade-up ab-d4 mt-9 w-full">
             <HeroIntentForm />
           </div>
 
-          {/* social proof */}
-          <div className="ab-fade-up ab-d5 mt-12 flex flex-col items-center gap-3">
-            <div className="flex -space-x-2.5">
-              {[
-                "linear-gradient(135deg,#F2682C,#FFB37A)",
-                "linear-gradient(135deg,#0A6E45,#7DDBB1)",
-                "linear-gradient(135deg,#3B6FE0,#9DBDF5)",
-                "linear-gradient(135deg,#7A4DE6,#C3A7F5)",
-              ].map((g, i) => (
-                <span
-                  key={i}
-                  aria-hidden
-                  className="h-8 w-8 rounded-full ring-2 ring-[#0F1F3D]"
-                  style={{ background: g }}
-                />
-              ))}
-            </div>
-            <p className="text-[13px] font-medium text-white/65">
-              <span className="font-bold text-white/90">1,00,000+</span> students have found their path
-            </p>
+          {/* honest trust signals (no inflated numbers) */}
+          <div className="ab-fade-up ab-d5 mt-11 flex flex-wrap items-center justify-center gap-2">
+            {["100% free", "Official sources", "No sales pitch"].map((t) => (
+              <span
+                key={t}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-[12px] font-semibold text-white/70"
+              >
+                <svg viewBox="0 0 16 16" aria-hidden className="h-3.5 w-3.5 text-[#7DDBB1]" fill="none">
+                  <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {t}
+              </span>
+            ))}
           </div>
         </div>
       </section>

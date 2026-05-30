@@ -81,7 +81,7 @@ export function HeroIntentForm() {
       </div>
 
       {/* primary CTA */}
-      <div className="relative">
+      <div className="flex flex-col items-center gap-2.5">
         <button
           type="button"
           onClick={start}
@@ -92,9 +92,12 @@ export function HeroIntentForm() {
             <path d="M3 8h9m0 0L8.5 4.5M12 8l-3.5 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <span className="pointer-events-none absolute -right-3.5 -top-2.5 rotate-[8deg] rounded-full bg-[#5B8DEF] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.04em] text-white shadow-[0_4px_10px_rgba(91,141,239,0.4)]">
-          Free
-        </span>
+        <p className="flex items-center gap-1.5 text-[12px] font-medium text-white/55">
+          <svg viewBox="0 0 24 24" aria-hidden className="h-3.5 w-3.5" fill="currentColor">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" opacity="0.9" />
+          </svg>
+          Free · sign in with Google to save your plan
+        </p>
       </div>
     </div>
   );
