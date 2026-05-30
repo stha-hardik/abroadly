@@ -1035,6 +1035,19 @@ export default function ChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard"
+              className="ab-focus chat-header-btn flex items-center gap-1.5"
+              title="Your dashboard — progress + document checklist"
+            >
+              <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none">
+                <rect x="3" y="3" width="6" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+                <rect x="11" y="3" width="6" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+                <rect x="3" y="13" width="6" height="4" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+                <rect x="11" y="10" width="6" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+              </svg>
+              <span className="hidden sm:inline">Dashboard</span>
+            </Link>
             <button type="button" onClick={() => setDocPanelOpen(true)} className="ab-focus chat-header-btn flex items-center gap-1.5 lg:hidden">
               <FolderIcon />
               <span>Docs</span>
