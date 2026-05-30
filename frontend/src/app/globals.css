@@ -30,6 +30,39 @@
   --shadow-sm: 0 1px 3px rgba(15, 15, 15, 0.06), 0 1px 2px rgba(15, 15, 15, 0.04);
   --shadow-md: 0 4px 12px rgba(15, 15, 15, 0.06), 0 1px 3px rgba(15, 15, 15, 0.04);
   --shadow-lg: 0 12px 32px rgba(15, 15, 15, 0.08), 0 2px 6px rgba(15, 15, 15, 0.04);
+
+  /* ── Public typography scale (Plus Jakarta Sans) ─────────────────────
+     Display sizes use tight negative tracking + tight leading for an
+     editorial feel; body is relaxed for readability. Used by the public
+     pages only (landing/onboarding/legal). */
+  --type-display-1: 700 4.25rem/1.04 "Plus Jakarta Sans", sans-serif; /* 68px */
+  --type-display-2: 700 2.75rem/1.06 "Plus Jakarta Sans", sans-serif; /* 44px */
+  --type-h1:        700 2rem/1.12   "Plus Jakarta Sans", sans-serif;  /* 32px */
+  --type-h2:        700 1.5rem/1.18 "Plus Jakarta Sans", sans-serif;  /* 24px */
+  --type-h3:        700 1.125rem/1.3 "Plus Jakarta Sans", sans-serif; /* 18px */
+  --type-body:      500 1rem/1.6    "Plus Jakarta Sans", sans-serif;  /* 16px */
+  --type-small:     500 0.8125rem/1.5 "Plus Jakarta Sans", sans-serif; /* 13px */
+  --type-micro:     600 0.6875rem/1.4 "Plus Jakarta Sans", sans-serif; /* 11px */
+
+  /* Tracking — negative on display, neutral on body, open on eyebrows */
+  --track-display-tight: -0.04em;
+  --track-display:       -0.025em;
+  --track-h1:            -0.02em;
+  --track-h2:            -0.015em;
+  --track-eyebrow:       0.08em;
+
+  /* ── Public spacing scale ────────────────────────────────────────────
+     A small, deliberate set. Use these instead of ad-hoc px values. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
 }
 
 html {
@@ -721,14 +754,14 @@ body {
   border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--ab-plum);
-  background: #f5f3ff;
-  border: 1px solid #ede8ff;
+  color: #0a6e45;
+  background: #e8f2ec;
+  border: 1px solid #d3e8db;
   transition: all 0.15s ease;
 }
 .doc-upload-btn:hover {
-  background: #ede8ff;
-  border-color: var(--ab-plum);
+  background: #d8ecdf;
+  border-color: #0a6e45;
 }
 
 .doc-drop-zone {
@@ -797,6 +830,119 @@ body {
 }
 .chat-messages::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.15);
+}
+
+/* ── Public typography vocabulary ──────────────────────────────────────
+   Small, restrained set used by the public pages (landing / onboarding /
+   legal). Internal surfaces (chat, admin) use their own internal designs. */
+
+.ab-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--type-micro);
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--ab-brand);
+}
+.ab-eyebrow::before {
+  content: "";
+  display: inline-block;
+  height: 6px;
+  width: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.75;
+}
+
+/* Display/heading classes set type only — color inherits from <body>
+   (var(--ab-ink)) by default, but callers can override with Tailwind
+   text-* utilities (e.g. text-white on dark sections). */
+.ab-display-1 {
+  font: var(--type-display-1);
+  letter-spacing: var(--track-display-tight);
+}
+.ab-display-2 {
+  font: var(--type-display-2);
+  letter-spacing: var(--track-display);
+}
+.ab-h1 {
+  font: var(--type-h1);
+  letter-spacing: var(--track-h1);
+}
+.ab-h2 {
+  font: var(--type-h2);
+  letter-spacing: var(--track-h2);
+}
+.ab-h3 {
+  font: var(--type-h3);
+}
+.ab-subhead {
+  font: var(--type-body);
+  font-size: 1.0625rem; /* 17px */
+  color: var(--ab-muted);
+}
+.ab-body {
+  font: var(--type-body);
+  color: var(--ab-muted);
+}
+.ab-small {
+  font: var(--type-small);
+  color: var(--ab-muted);
+}
+
+/* Clamp the display down on smaller viewports so the hero never wraps ugly */
+@media (max-width: 640px) {
+  .ab-display-1 { font-size: 2.625rem; line-height: 1.06; } /* 42px */
+  .ab-display-2 { font-size: 2.125rem; line-height: 1.1; }  /* 34px */
+}
+
+/* Public-page section rhythm — used as className="ab-section" on <section>.
+   Pads vertically with Notion-spacious breathing on desktop. */
+.ab-section {
+  padding-top: var(--space-9);
+  padding-bottom: var(--space-9);
+}
+@media (max-width: 768px) {
+  .ab-section { padding-top: var(--space-8); padding-bottom: var(--space-8); }
+}
+
+/* Buttons — primary (solid ink) and ghost (hairline border) */
+.ab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.ab-btn-primary {
+  background: var(--ab-ink);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.ab-btn-primary:hover {
+  background: #000;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+.ab-btn-primary:active { transform: translateY(0); }
+.ab-btn-ghost {
+  background: #fff;
+  color: var(--ab-ink);
+  border: 1px solid var(--ab-line);
+  box-shadow: var(--shadow-xs);
+}
+.ab-btn-ghost:hover {
+  background: var(--ab-paper-2);
+  border-color: #D8D3C8;
+  transform: translateY(-1px);
 }
 
 /* ── Landing page — Notion-style entrance + helpers ────────────────── */
