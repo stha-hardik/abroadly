@@ -125,39 +125,70 @@ export default function Home() {
         ]}
       />
 
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <section className="ab-dot-grid relative overflow-hidden">
-        <div className="mx-auto grid max-w-6xl gap-12 px-5 pb-16 pt-16 sm:px-8 sm:pt-24 sm:pb-20 lg:grid-cols-[7fr_5fr] lg:items-center lg:gap-16 lg:pb-28 lg:pt-32">
-          {/* Left column — type-led */}
-          <div className="max-w-xl">
-            <p className="ab-fade-up ab-d1 ab-eyebrow">Built for students in Nepal</p>
+      {/* ── Hero (dark, centered) ──────────────────────────────────────── */}
+      <section
+        className="relative overflow-hidden"
+        style={{ background: "linear-gradient(180deg, #15294C 0%, #0F1F3D 72%, #0E1B36 100%)" }}
+      >
+        {/* atmosphere — faint dot grid + a warm glow up top */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-50"
+          style={{
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-[-14rem] h-[34rem] w-[52rem] -translate-x-1/2 rounded-full blur-3xl"
+          style={{ background: "radial-gradient(closest-side, rgba(242,104,44,0.18), rgba(242,104,44,0))" }}
+        />
 
-            <h1 className="ab-fade-up ab-d2 ab-display-1 mt-5">
-              Study abroad without
-              <br className="hidden sm:block" /> the guesswork.
-            </h1>
+        <div className="relative mx-auto flex max-w-4xl flex-col items-center px-5 pb-28 pt-20 text-center sm:pt-28">
+          <span className="ab-fade-up ab-d1 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-1.5 text-[12.5px] font-semibold text-white/85 backdrop-blur">
+            <svg viewBox="0 0 16 16" aria-hidden className="h-3.5 w-3.5 text-[#FFB37A]" fill="currentColor">
+              <path d="M8 0l1.6 4.9L14.4 6 9.6 7.1 8 12 6.4 7.1 1.6 6l4.8-1.1L8 0z" />
+            </svg>
+            AI powered
+          </span>
 
-            <p className="ab-fade-up ab-d3 ab-subhead mt-6 max-w-lg">
-              Calm, honest answers on eligibility, documents, scholarships, visas, and costs —
-              grounded in official sources, never an agency&apos;s sales pitch.
-            </p>
+          <h1 className="ab-fade-up ab-d2 ab-display-1 mt-7 text-white">
+            DIY your <span className="text-[#FF7A3D]">academic</span> journey
+          </h1>
 
-            <div className="ab-fade-up ab-d4 mt-9 flex flex-col items-start gap-4">
-              <HeroIntentForm />
-              <Link
-                href="#how-it-works"
-                className="ab-focus group inline-flex items-center gap-1.5 rounded text-[13.5px] font-semibold text-[var(--ab-muted)] underline-offset-4 hover:text-[var(--ab-ink)] hover:underline"
-              >
-                or see how it works
-                <span aria-hidden className="transition-transform group-hover:translate-y-0.5">
-                  ↓
-                </span>
-              </Link>
-            </div>
+          <div className="ab-fade-up ab-d4 mt-10 w-full">
+            <HeroIntentForm />
           </div>
 
-          {/* Right column — product visual (the proof) */}
-          <ChatPreview className="ab-fade-up ab-d5 lg:-rotate-[1.5deg]" />
+          {/* social proof */}
+          <div className="ab-fade-up ab-d5 mt-12 flex flex-col items-center gap-3">
+            <div className="flex -space-x-2.5">
+              {[
+                "linear-gradient(135deg,#F2682C,#FFB37A)",
+                "linear-gradient(135deg,#0A6E45,#7DDBB1)",
+                "linear-gradient(135deg,#3B6FE0,#9DBDF5)",
+                "linear-gradient(135deg,#7A4DE6,#C3A7F5)",
+              ].map((g, i) => (
+                <span
+                  key={i}
+                  aria-hidden
+                  className="h-8 w-8 rounded-full ring-2 ring-[#0F1F3D]"
+                  style={{ background: g }}
+                />
+              ))}
+            </div>
+            <p className="text-[13px] font-medium text-white/65">
+              <span className="font-bold text-white/90">1,00,000+</span> students have found their path
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Product peek — the card straddles the navy → paper seam ─────── */}
+      <section className="bg-[var(--ab-paper)]">
+        <div className="mx-auto max-w-2xl px-5 pb-16 sm:px-8 sm:pb-20">
+          <ChatPreview className="ab-fade-up relative z-10 -mt-14 sm:-mt-20" />
         </div>
       </section>
 
