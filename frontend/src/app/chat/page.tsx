@@ -63,6 +63,8 @@ interface UploadMessage {
 
 interface CounselorCardMessage {
   role: "counselor_card";
+  // Auto-injected after a few substantive turns (vs. a manual show).
+  auto?: boolean;
 }
 
 type Message = UserMessage | AiMessage | CounselorMessage | UploadMessage | CounselorCardMessage;
@@ -132,17 +134,82 @@ interface DocType {
   icon: string;
   desc: string;
   accept: string;
+  // Shown in the doc panel when a row is expanded ("what counts" + a Nepal-specific tip).
+  requirements: string[];
+  tip: string;
 }
 
 const docTypes: DocType[] = [
-  { id: "grade_sheet", label: "Grade Sheet / Transcript", icon: "\u{1F4CA}", desc: "+2, A-levels, or bachelor's marksheet", accept: ".pdf,.txt,.jpg,.jpeg,.png" },
-  { id: "citizenship", label: "Citizenship", icon: "\u{1F1F3}\u{1F1F5}", desc: "Nepali citizenship certificate", accept: ".pdf,.jpg,.jpeg,.png" },
-  { id: "passport", label: "Passport", icon: "\u{1F6C2}", desc: "Valid passport bio page", accept: ".pdf,.jpg,.jpeg,.png" },
-  { id: "sop", label: "Statement of Purpose", icon: "\u{270D}\u{FE0F}", desc: "SOP or personal statement draft", accept: ".pdf,.txt" },
-  { id: "recommendation", label: "Recommendation Letter", icon: "\u{1F4E8}", desc: "LOR from teacher or employer", accept: ".pdf,.txt,.jpg,.jpeg,.png" },
-  { id: "financial", label: "Financial Documents", icon: "\u{1F3E6}", desc: "Bank statement, sponsor letter, scholarship", accept: ".pdf,.jpg,.jpeg,.png" },
-  { id: "ielts", label: "IELTS / PTE / TOEFL", icon: "\u{1F4DD}", desc: "English proficiency test score", accept: ".pdf,.jpg,.jpeg,.png" },
-  { id: "other", label: "Other Document", icon: "\u{1F4CE}", desc: "Any other relevant document", accept: ".pdf,.txt,.jpg,.jpeg,.png" },
+  {
+    id: "grade_sheet", label: "Transcript", icon: "\u{1F4CA}",
+    desc: "+2, A-levels, or bachelor's marksheet", accept: ".pdf,.txt,.jpg,.jpeg,.png",
+    requirements: [
+      "Official marksheet or transcript from your board or university",
+      "Every year or semester you've completed so far",
+      "A clear scan where all grades are legible",
+    ],
+    tip: "NEB +2 transcripts are fine. If your bachelor's is ongoing, upload the semesters you've finished.",
+  },
+  {
+    id: "passport", label: "Passport", icon: "\u{1F6C2}",
+    desc: "Valid passport bio page", accept: ".pdf,.jpg,.jpeg,.png",
+    requirements: [
+      "The photo / bio page showing name, number and expiry",
+      "Valid for at least your full intended stay",
+      "A colour scan with all four corners visible",
+    ],
+    tip: "No passport yet? Apply early at the DoP — visa filing needs it, so don't wait for an offer.",
+  },
+  {
+    id: "ielts", label: "English test", icon: "\u{1F4DD}",
+    desc: "IELTS, PTE, TOEFL or Duolingo score", accept: ".pdf,.jpg,.jpeg,.png",
+    requirements: [
+      "Official score report (TRF) or a clear screenshot",
+      "Taken within the last two years",
+      "Shows all four skill scores",
+    ],
+    tip: "Most UK and Australian unis want IELTS 6.0–6.5 overall. Booked but not sat? Upload the confirmation for now.",
+  },
+  {
+    id: "sop", label: "Statement of purpose", icon: "\u{270D}\u{FE0F}",
+    desc: "SOP or personal statement draft", accept: ".pdf,.txt",
+    requirements: [
+      "Your draft — even a rough first version helps",
+      "Why this course, why this country, and your goals",
+      "PDF or plain text",
+    ],
+    tip: "Don't have one yet? Upload a few bullet points and I'll help you shape a full draft.",
+  },
+  {
+    id: "recommendation", label: "Recommendation letters", icon: "\u{1F4E8}",
+    desc: "LOR from a teacher or employer", accept: ".pdf,.txt,.jpg,.jpeg,.png",
+    requirements: [
+      "Signed letter on letterhead where possible",
+      "From someone who taught or supervised you",
+      "Their name, role and contact details",
+    ],
+    tip: "Need to create one? Use the recommendation-letter generator on your dashboard, then have your referee sign it.",
+  },
+  {
+    id: "financial", label: "Financial proof", icon: "\u{1F3E6}",
+    desc: "Bank statement, sponsor letter or scholarship", accept: ".pdf,.jpg,.jpeg,.png",
+    requirements: [
+      "Bank balance certificate or recent statement",
+      "Sponsor's letter and relationship proof, if sponsored",
+      "Enough to cover tuition plus living for year one",
+    ],
+    tip: "The UK needs funds held ~28 days; Australia and Canada differ. Ask me the exact amount for your country.",
+  },
+  {
+    id: "other", label: "Other", icon: "\u{1F4CE}",
+    desc: "Any other relevant document", accept: ".pdf,.txt,.jpg,.jpeg,.png",
+    requirements: [
+      "Offer letters, CV, certificates or awards",
+      "Work experience or internship letters",
+      "Anything a university has specifically asked you for",
+    ],
+    tip: "Not sure if it matters? Upload it anyway — I'll tell you whether it's useful.",
+  },
 ];
 
 const EDUCATION_OPTIONS: { value: EducationLevel; label: string }[] = [
@@ -274,11 +341,10 @@ function PhoneIcon() {
   );
 }
 
-/* Compact 8-row document slot for the chat sidebar (and dashboard). Same IDs
+/* Compact 7-row document slot for the chat sidebar (and dashboard). Same IDs
  * used by both surfaces so they stay in sync. */
 const SIDEBAR_DOC_SLOTS = [
   { id: "grade_sheet", label: "Transcript" },
-  { id: "citizenship", label: "Citizenship" },
   { id: "passport", label: "Passport" },
   { id: "ielts", label: "English test" },
   { id: "sop", label: "Statement of purpose" },
@@ -286,6 +352,11 @@ const SIDEBAR_DOC_SLOTS = [
   { id: "financial", label: "Financial proof" },
   { id: "other", label: "Other" },
 ];
+
+/* Accept attribute per doc id (the sidebar quick-upload reuses the docTypes config). */
+const DOC_ACCEPT_BY_ID: Record<string, string> = Object.fromEntries(
+  docTypes.map((d) => [d.id, d.accept]),
+);
 
 /* ── Typing indicator ─────────────────────────────────────────────── */
 
@@ -555,6 +626,8 @@ function DocumentPanel({
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  // Which row has its "what counts" detail expanded (tapping Upload reveals it).
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const uploadedByType = useMemo(() => {
     const byType = new Map<string, StudentDocument>();
@@ -626,49 +699,70 @@ function DocumentPanel({
                 ? getStudentDocumentDownloadUrl(studentId, uploadedDoc.doc_id)
                 : null;
               const isDragTarget = dragOver === dt.id;
+              const isExpanded = expandedId === dt.id && !uploadedDoc;
               return (
-                <div
-                  key={dt.id}
-                  className={`doc-card ${isDragTarget ? "doc-card-drag" : ""} ${uploadedDoc ? "doc-card-done" : ""}`}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(dt.id); }}
-                  onDragLeave={() => setDragOver(null)}
-                  onDrop={(e) => handleDrop(dt, e)}
-                >
-                  {uploadedDoc && thumbUrl ? (
-                    <img src={thumbUrl} alt={uploadedDoc.filename} className="doc-thumb" />
-                  ) : (
-                    <span className="text-xl leading-none shrink-0">{dt.icon}</span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-semibold text-[var(--ab-ink)] truncate">{dt.label}</p>
-                    {uploadedDoc ? (
-                      <div>
-                        <p className="text-[11px] text-[#6B655C] truncate">{uploadedDoc.filename}</p>
-                        <p className="text-[10px] text-[#8A847B] mt-0.5">
-                          {uploadedDoc.ext.replace(".", "").toUpperCase()} {"·"} {formatBytes(uploadedDoc.size_bytes)}
-                        </p>
-                      </div>
+                <div key={dt.id}>
+                  <div
+                    className={`doc-card ${isDragTarget ? "doc-card-drag" : ""} ${uploadedDoc ? "doc-card-done" : ""}`}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(dt.id); }}
+                    onDragLeave={() => setDragOver(null)}
+                    onDrop={(e) => handleDrop(dt, e)}
+                  >
+                    {uploadedDoc && thumbUrl ? (
+                      <img src={thumbUrl} alt={uploadedDoc.filename} className="doc-thumb" />
                     ) : (
-                      <p className="text-[11px] text-[#8A847B] truncate">{dt.desc}</p>
+                      <span className="text-xl leading-none shrink-0">{dt.icon}</span>
                     )}
-                  </div>
-                  {uploadedDoc ? (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button type="button" onClick={() => onDiscuss(dt)} className="rounded-lg bg-[#FDECEE] px-2.5 py-1.5 text-[11px] font-bold text-[#E11D2A] hover:bg-[#fbdce0] transition-colors">Ask AI</button>
-                      <button type="button" onClick={() => fileRefs.current[dt.id]?.click()} className="text-[11px] font-semibold text-[#8A847B] hover:text-[#E11D2A] transition-colors">Replace</button>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-[var(--ab-ink)] truncate">{dt.label}</p>
+                      {uploadedDoc ? (
+                        <div>
+                          <p className="text-[11px] text-[#6B655C] truncate">{uploadedDoc.filename}</p>
+                          <p className="text-[10px] text-[#8A847B] mt-0.5">
+                            {uploadedDoc.ext.replace(".", "").toUpperCase()} {"·"} {formatBytes(uploadedDoc.size_bytes)}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-[#8A847B] truncate">{dt.desc}</p>
+                      )}
                     </div>
-                  ) : isUploading ? (
-                    <div className="shrink-0"><div className="h-5 w-5 rounded-full border-2 border-[#E11D2A] border-t-transparent animate-spin" /></div>
-                  ) : (
-                    <button type="button" onClick={() => fileRefs.current[dt.id]?.click()} className="doc-upload-btn shrink-0">Upload</button>
+                    {uploadedDoc ? (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button type="button" onClick={() => onDiscuss(dt)} className="rounded-lg bg-[#FDECEE] px-2.5 py-1.5 text-[11px] font-bold text-[#E11D2A] hover:bg-[#fbdce0] transition-colors">Ask AI</button>
+                        <button type="button" onClick={() => fileRefs.current[dt.id]?.click()} className="text-[11px] font-semibold text-[#8A847B] hover:text-[#E11D2A] transition-colors">Replace</button>
+                      </div>
+                    ) : isUploading ? (
+                      <div className="shrink-0"><div className="h-5 w-5 rounded-full border-2 border-[#E11D2A] border-t-transparent animate-spin" /></div>
+                    ) : (
+                      <button type="button" onClick={() => setExpandedId(isExpanded ? null : dt.id)} aria-expanded={isExpanded} className="doc-upload-btn shrink-0">{isExpanded ? "Close" : "Upload"}</button>
+                    )}
+                    <input
+                      ref={(el) => { fileRefs.current[dt.id] = el; }}
+                      type="file"
+                      accept={dt.accept}
+                      className="hidden"
+                      onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFile(dt, file); e.target.value = ""; setExpandedId(null); }}
+                    />
+                  </div>
+                  {isExpanded && (
+                    <div className="mt-1.5 rounded-[12px] border border-[#EFECE4] bg-[#FAF9F6] px-3.5 py-3">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8A847B]">What counts</p>
+                      <ul className="mt-1.5 space-y-1">
+                        {dt.requirements.map((r, i) => (
+                          <li key={i} className="flex gap-1.5 text-[12px] leading-[1.5] text-[#3F3A33]">
+                            <span aria-hidden className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-[#E11D2A]" />
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 text-[11.5px] leading-[1.5] text-[#6B655C]"><span className="font-semibold text-[#1B1916]">Tip · </span>{dt.tip}</p>
+                      <div className="mt-3 flex items-center gap-2">
+                        <button type="button" onClick={() => fileRefs.current[dt.id]?.click()} className="rounded-lg bg-[#E11D2A] px-3.5 py-2 text-[12px] font-bold text-white transition-colors hover:bg-[#C0121F]">Choose file</button>
+                        <button type="button" onClick={() => setExpandedId(null)} className="rounded-lg px-2.5 py-2 text-[12px] font-semibold text-[#8A847B] transition-colors hover:text-[#1B1916]">Cancel</button>
+                        <span className="ml-auto text-[10px] text-[#B5B0A6]">{dt.accept.replace(/\./g, "").replace(/,/g, " · ").toUpperCase()}</span>
+                      </div>
+                    </div>
                   )}
-                  <input
-                    ref={(el) => { fileRefs.current[dt.id] = el; }}
-                    type="file"
-                    accept={dt.accept}
-                    className="hidden"
-                    onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFile(dt, file); e.target.value = ""; }}
-                  />
                 </div>
               );
             })}
@@ -1032,9 +1126,14 @@ function ProfilePopup({
 
 /* ── Human counselor card (rendered inside chat) ──────────────────── */
 
-function CounselorCard({ consented, onGrant }: { consented: boolean; onGrant: () => void }) {
+function CounselorCard({ consented, onGrant, auto }: { consented: boolean; onGrant: () => void; auto?: boolean }) {
   return (
     <div className="counselor-card">
+      {auto && !consented && (
+        <p className="mb-3 text-[12px] font-medium leading-[1.5] text-[#6B655C]">
+          You&apos;ve asked a few good questions. Want a real person to walk you through your options?
+        </p>
+      )}
       <div className="flex items-start gap-3">
         <div className="relative shrink-0">
           <img
@@ -1091,7 +1190,13 @@ export default function ChatPage() {
   const [uploadPrompt, setUploadPrompt] = useState<{ label: string } | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [callConsented, setCallConsented] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Counsellor auto-offer: after a few substantive Q&A turns, surface the card once.
+  const counselorOffered = useRef(false);
+  const substantiveTurns = useRef(0);
+  // Per-slot hidden inputs for the sidebar quick-upload checkboxes.
+  const sidebarFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -1242,6 +1347,12 @@ export default function ChatPage() {
       if (answerWantsUpload(res) && !docPanelOpen) {
         setUploadPrompt({ label: inferUploadLabel(res) });
       }
+      // After a few substantive turns, gently offer the human counsellor (once).
+      substantiveTurns.current += 1;
+      if (!counselorOffered.current && substantiveTurns.current >= 3 && !callConsented) {
+        counselorOffered.current = true;
+        setMessages((m) => (m.length && m[m.length - 1].role === "counselor_card" ? m : [...m, { role: "counselor_card", auto: true }]));
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error contacting server.";
       setMessages((m) => [
@@ -1303,14 +1414,30 @@ export default function ChatPage() {
     setMessages((m) => [...m, { role: "upload", status: "done" as const, filename, text: `Uploaded ${docType.label}: ${filename}`, docType: docType.id }]);
   }, [refreshDocuments, studentId]);
 
-  function showCounselorCard() {
-    setCallConsented(false);
-    setMessages((m) => {
-      // Avoid stacking duplicate cards at the end.
-      if (m.length && m[m.length - 1].role === "counselor_card") return m;
-      return [...m, { role: "counselor_card" }];
-    });
-  }
+  // Sidebar quick-upload: clicking a doc checkbox opens the picker, then uploads
+  // straight to that doc_type (same path as the doc panel, minus the detail view).
+  const uploadSidebarDoc = useCallback(async (slotId: string, slotLabel: string, file: File) => {
+    if (!studentId) return;
+    setUploadingSlot(slotId);
+    setMessages((m) => [...m, { role: "upload", status: "uploading", filename: file.name, text: `Uploading ${slotLabel}: ${file.name}`, docType: slotId }]);
+    let fileToUpload = file;
+    try {
+      if (isImageFile(file)) fileToUpload = await compressImage(file);
+      const res = await uploadFile(studentId, fileToUpload, slotId, file.name);
+      const document = res.document;
+      if (document) {
+        setDocuments((docs) => [document, ...docs.filter((d) => d.doc_id !== document.doc_id)]);
+      } else {
+        refreshDocuments(studentId).catch(() => {});
+      }
+      setMessages((m) => m.map((msg, i) => (i === m.length - 1 && msg.role === "upload" ? { ...msg, status: "done" as const, text: `Uploaded ${slotLabel}: ${file.name}` } : msg)));
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Upload failed.";
+      setMessages((m) => m.map((msg, i) => (i === m.length - 1 && msg.role === "upload" ? { ...msg, status: "error" as const, text: `Upload failed: ${errMsg}` } : msg)));
+    } finally {
+      setUploadingSlot(null);
+    }
+  }, [studentId, refreshDocuments]);
 
   async function grantCounselorCall() {
     if (phoneRequired) {
@@ -1432,7 +1559,7 @@ export default function ChatPage() {
           )}
         </section>
 
-        {/* Section 2 · Documents (compact 8-row status) */}
+        {/* Section 2 · Documents (compact 7-row status — each row is a quick-upload checkbox) */}
         <section className="border-b border-[#E8E5DD] px-5 py-6">
           <div className="flex items-baseline justify-between">
             <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#0A6E45]">Documents</p>
@@ -1440,26 +1567,54 @@ export default function ChatPage() {
               {uploadedCount} / {SIDEBAR_DOC_SLOTS.length}
             </p>
           </div>
-          <ul className="mt-3 flex flex-col gap-1.5">
+          <ul className="mt-3 flex flex-col gap-0.5">
             {SIDEBAR_DOC_SLOTS.map((slot) => {
               const uploaded = documents.some((d) => d.doc_type === slot.id);
+              const isUploadingSlot = uploadingSlot === slot.id;
+              const accept = DOC_ACCEPT_BY_ID[slot.id] || ".pdf,.jpg,.jpeg,.png";
               return (
-                <li key={slot.id} className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-white ${
-                      uploaded ? "bg-[#0A6E45]" : "border border-[#D1CABD] bg-transparent"
-                    }`}
+                <li key={slot.id}>
+                  <button
+                    type="button"
+                    disabled={isUploadingSlot}
+                    onClick={() => {
+                      if (uploaded) { setDocPanelOpen(true); return; }
+                      sidebarFileRefs.current[slot.id]?.click();
+                    }}
+                    title={uploaded ? `${slot.label} — view or replace` : `Upload ${slot.label}`}
+                    className="ab-focus group flex w-full items-center gap-2 rounded-md px-1 py-1 text-left transition hover:bg-white disabled:cursor-default"
                   >
-                    {uploaded && (
-                      <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none">
-                        <path d="M2.5 5.5 4 7l3.5-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                    <span
+                      aria-hidden
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] text-white transition ${
+                        uploaded ? "bg-[#0A6E45]" : "border border-[#D1CABD] bg-white group-hover:border-[#0A6E45]"
+                      }`}
+                    >
+                      {isUploadingSlot ? (
+                        <svg viewBox="0 0 24 24" className="h-3 w-3 animate-spin text-[#0A6E45]" fill="none">
+                          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+                          <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                        </svg>
+                      ) : uploaded ? (
+                        <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none">
+                          <path d="M2.5 5.5 4 7l3.5-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      ) : null}
+                    </span>
+                    <span className={`flex-1 truncate text-[11.5px] ${uploaded ? "text-[#1B1916]" : "text-[#6B655C] group-hover:text-[#1B1916]"}`}>
+                      {slot.label}
+                    </span>
+                    {!uploaded && !isUploadingSlot && (
+                      <span className="shrink-0 text-[10px] font-semibold text-[#0A6E45] opacity-0 transition group-hover:opacity-100">Upload</span>
                     )}
-                  </span>
-                  <span className={`flex-1 truncate text-[11.5px] ${uploaded ? "text-[#1B1916]" : "text-[#6B655C]"}`}>
-                    {slot.label}
-                  </span>
+                  </button>
+                  <input
+                    ref={(el) => { sidebarFileRefs.current[slot.id] = el; }}
+                    type="file"
+                    accept={accept}
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadSidebarDoc(slot.id, slot.label, f); e.target.value = ""; }}
+                  />
                 </li>
               );
             })}
@@ -1470,7 +1625,7 @@ export default function ChatPage() {
             className="ab-focus mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-[#E8E5DD] bg-white py-2 text-[12px] font-semibold text-[#1B1916] transition hover:border-[#0A6E45] hover:text-[#0A6E45]"
           >
             <FolderIcon />
-            Upload
+            Open document manager
           </button>
         </section>
 
@@ -1652,7 +1807,7 @@ export default function ChatPage() {
                   return (
                     <div key={i} className="chat-row chat-row-ai" style={{ animationDelay: "0.04s" }}>
                       <AiAvatar />
-                      <CounselorCard consented={callConsented} onGrant={grantCounselorCall} />
+                      <CounselorCard consented={callConsented} onGrant={grantCounselorCall} auto={msg.auto} />
                     </div>
                   );
                 }
