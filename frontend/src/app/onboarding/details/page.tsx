@@ -121,6 +121,26 @@ export default function ProfileDetailsPage() {
           target_countries: current.target_countries || [],
           goals: current.goals || "",
         });
+        // One-shot pre-fill from the landing hero ("I want to study X in Y").
+        try {
+          const rawIntent = localStorage.getItem("abroadly_intent");
+          if (rawIntent) {
+            const intent = JSON.parse(rawIntent) as { degree?: string; country?: string };
+            setForm((prev) => ({
+              ...prev,
+              target_countries:
+                prev.target_countries.length > 0
+                  ? prev.target_countries
+                  : intent.country
+                    ? [intent.country]
+                    : prev.target_countries,
+              goals: prev.goals || (intent.degree ? `Aiming for a ${intent.degree} abroad.` : prev.goals),
+            }));
+            localStorage.removeItem("abroadly_intent");
+          }
+        } catch {
+          /* ignore malformed intent */
+        }
         setLoadState("ready");
       })
       .catch(() => {
