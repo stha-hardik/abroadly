@@ -3,8 +3,6 @@ import { GoogleSignInButton } from "./google-sign-in-button";
 import { NavBar } from "./nav-bar";
 import { SiteFooter } from "./site-footer";
 
-const assurances = ["Free for students", "No agency pressure", "Built for Nepali questions"];
-
 const steps = [
   {
     no: "01",
@@ -67,41 +65,9 @@ function Eyebrow({ children, className = "" }: { children: React.ReactNode; clas
   return <span className={`ab-eyebrow ${className}`}>{children}</span>;
 }
 
-function PrimaryButton({
-  href,
-  children,
-  className = "",
-}: {
-  href: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
+function ChatPreview({ className = "" }: { className?: string }) {
   return (
-    <Link href={href} className={`ab-focus ab-btn ab-btn-primary ${className}`}>
-      {children}
-    </Link>
-  );
-}
-
-function GhostButton({
-  href,
-  children,
-  external = false,
-  className = "",
-}: {
-  href: string;
-  children: React.ReactNode;
-  external?: boolean;
-  className?: string;
-}) {
-  const cls = `ab-focus ab-btn ab-btn-ghost ${className}`;
-  if (external) return <a href={href} className={cls}>{children}</a>;
-  return <Link href={href} className={cls}>{children}</Link>;
-}
-
-function ChatPreview() {
-  return (
-    <div className="ab-fade-up ab-d5 relative mx-auto mt-14 max-w-3xl sm:mt-16">
+    <div className={`relative ${className}`}>
       <div className="ab-hero-glow pointer-events-none absolute -inset-x-10 -top-16 bottom-0 -z-10" />
       <div className="overflow-hidden rounded-2xl border border-[var(--ab-line)] bg-white shadow-[var(--shadow-lg)]">
         {/* window chrome */}
@@ -161,41 +127,40 @@ export default function Home() {
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section className="ab-dot-grid relative overflow-hidden">
-        <div className="mx-auto max-w-3xl px-5 pb-4 pt-20 text-center sm:px-8 sm:pt-28">
-          <div className="ab-fade-up ab-d1 inline-flex items-center gap-2 rounded-full border border-[var(--ab-line)] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[var(--ab-ink-soft)] shadow-[var(--shadow-xs)]">
-            <span className="h-2 w-2 rounded-full bg-[var(--ab-brand)]" />
-            Free · built for students in Nepal
+        <div className="mx-auto grid max-w-6xl gap-12 px-5 pb-16 pt-16 sm:px-8 sm:pt-24 sm:pb-20 lg:grid-cols-[7fr_5fr] lg:items-center lg:gap-16 lg:pb-28 lg:pt-32">
+          {/* Left column — type-led */}
+          <div className="max-w-xl">
+            <p className="ab-fade-up ab-d1 ab-eyebrow">Built for students in Nepal</p>
+
+            <h1 className="ab-fade-up ab-d2 ab-display-1 mt-5">
+              Study abroad without
+              <br className="hidden sm:block" /> the guesswork.
+            </h1>
+
+            <p className="ab-fade-up ab-d3 ab-subhead mt-6 max-w-lg">
+              Calm, honest answers on eligibility, documents, scholarships, visas, and costs —
+              grounded in official sources, never an agency&apos;s sales pitch.
+            </p>
+
+            <div className="ab-fade-up ab-d4 mt-9 flex flex-col items-start gap-4">
+              <GoogleSignInButton
+                label="Start free with Google"
+                caption="Save your study profile once"
+              />
+              <Link
+                href="#how-it-works"
+                className="ab-focus group inline-flex items-center gap-1.5 rounded text-[13.5px] font-semibold text-[var(--ab-muted)] underline-offset-4 hover:text-[var(--ab-ink)] hover:underline"
+              >
+                or see how it works
+                <span aria-hidden className="transition-transform group-hover:translate-y-0.5">
+                  ↓
+                </span>
+              </Link>
+            </div>
           </div>
 
-          <h1 className="ab-fade-up ab-d2 ab-display-1 mx-auto mt-7 max-w-3xl">
-            Study abroad without
-            <br className="hidden sm:block" /> the guesswork.
-          </h1>
-
-          <p className="ab-fade-up ab-d3 ab-subhead mx-auto mt-6 max-w-xl">
-            Calm, honest answers on eligibility, documents, scholarships, visas, and costs —
-            grounded in official sources, never an agency&apos;s sales pitch.
-          </p>
-
-          <div className="ab-fade-up ab-d4 mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <GoogleSignInButton label="Start free with Google" caption="Save your study profile once" />
-            <GhostButton href="#how-it-works">See how it works</GhostButton>
-          </div>
-
-          <div className="ab-fade-up ab-d4 mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] font-semibold text-[var(--ab-muted-soft)]">
-            {assurances.map((item) => (
-              <span key={item} className="inline-flex items-center gap-1.5">
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 text-[var(--ab-brand)]" fill="none">
-                  <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="px-5 pb-24 sm:px-8 sm:pb-28">
-          <ChatPreview />
+          {/* Right column — product visual (the proof) */}
+          <ChatPreview className="ab-fade-up ab-d5 lg:-rotate-[1.5deg]" />
         </div>
       </section>
 
