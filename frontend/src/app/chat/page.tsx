@@ -30,11 +30,12 @@ import {
 
 /* Abroadly's own human counsellor (placeholder identity — operator can edit). */
 const COUNSELOR = {
-  name: "Aastha Koirala",
+  name: "Prisma Gautam",
   role: "Study-Abroad Counsellor · Abroadly",
-  experience: "8+ years · guided 800+ Nepali students",
+  experience: "guided 800+ students",
   blurb: "Friendly, no-pressure help with universities, visas, scholarships and documents.",
-  initials: "AK",
+  initials: "PG",
+  photo: "/images/prisma-gautam.jpeg",
 };
 
 interface UserMessage {
@@ -1036,7 +1037,11 @@ function CounselorCard({ consented, onGrant }: { consented: boolean; onGrant: ()
     <div className="counselor-card">
       <div className="flex items-start gap-3">
         <div className="relative shrink-0">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E11D2A] to-[#7A0D15] text-[15px] font-bold text-white">{COUNSELOR.initials}</div>
+          <img
+            src={COUNSELOR.photo}
+            alt={COUNSELOR.name}
+            className="h-12 w-12 rounded-2xl object-cover ring-1 ring-black/5"
+          />
           <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white">
             <svg viewBox="0 0 20 20" className="h-4 w-4 text-[#E11D2A]" fill="currentColor"><path d="M10 1l2.4 1.8 3-.1 1 2.8 2.5 1.6-1 2.8 1 2.8-2.5 1.6-1 2.8-3-.1L10 19l-2.4-1.8-3 .1-1-2.8L1.1 13l1-2.8-1-2.8 2.5-1.6 1-2.8 3 .1L10 1z"/><path d="M8.6 12.2 6.4 10l-1 1 3.2 3.2 5.8-5.8-1-1z" fill="#fff"/></svg>
           </span>
@@ -1398,9 +1403,9 @@ export default function ChatPage() {
           <div className="mt-3 flex items-start gap-3">
             <div
               aria-hidden
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E8F2EC] text-[12px] font-bold text-[#0A6E45]"
+              className="h-9 w-9 shrink-0 overflow-hidden rounded-full ring-1 ring-black/5"
             >
-              {COUNSELOR.initials}
+              <img src={COUNSELOR.photo} alt="" className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0">
               <p className="truncate text-[13px] font-bold tracking-[-0.005em] text-[#1B1916]">{COUNSELOR.name}</p>
@@ -1629,9 +1634,11 @@ export default function ChatPage() {
                 if (msg.role === "counselor") {
                   return (
                     <div key={i} className="chat-row chat-row-ai" style={{ animationDelay: "0.04s" }}>
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-emerald-600 ring-1 ring-emerald-500/20">
-                        <span className="text-[10px] font-bold text-white">HC</span>
-                      </div>
+                      <img
+                        src={COUNSELOR.photo}
+                        alt={COUNSELOR.name}
+                        className="h-8 w-8 shrink-0 rounded-[10px] object-cover ring-1 ring-emerald-500/20"
+                      />
                       <div className="chat-bubble-ai" style={{ borderColor: "rgba(16,185,129,0.2)", background: "#F2FBF6" }}>
                         <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide mb-1">Human Counselor</p>
                         <p className="chat-bubble-text whitespace-pre-wrap">{msg.text}</p>
