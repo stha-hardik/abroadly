@@ -379,6 +379,82 @@ function HeroModule({
   );
 }
 
+/* ── Progress spine ───────────────────────────────────────────────────── */
+
+function ProgressModule({ student, docs }: { student: StudentOut; docs: StudentDocument[] }) {
+  const docCount = new Set(docs.map((d) => d.doc_type)).size;
+  const profileDone = !!student.profile_completed;
+  const docsDone = docCount >= DOC_SLOTS.length;
+
+  const stages = [
+    { key: "profile", label: "Profile", sub: profileDone ? "Complete" : "Add your details", done: profileDone },
+    { key: "documents", label: "Documents", sub: `${docCount}/${DOC_SLOTS.length} uploaded`, done: docsDone },
+    { key: "shortlist", label: "Shortlist", sub: "Pick universities", done: false },
+    { key: "apply", label: "Apply", sub: "Submit & track", done: false },
+    { key: "visa", label: "Visa", sub: "Offer → visa", done: false },
+  ];
+  const currentIdx = stages.findIndex((s) => !s.done);
+  const doneCount = stages.filter((s) => s.done).length;
+
+  return (
+    <section className="mx-auto max-w-3xl">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <SectionEyebrow>Your progress</SectionEyebrow>
+          <SectionTitle>Where you are</SectionTitle>
+        </div>
+        <p className="text-[12px] font-semibold text-[#6B655C]">{doneCount} / {stages.length} stages done</p>
+      </div>
+
+      <ol className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+        {stages.map((s, i) => {
+          const status = s.done ? "done" : i === currentIdx ? "current" : "todo";
+          return (
+            <li
+              key={s.key}
+              className={`rounded-xl border p-3 ${
+                status === "done"
+                  ? "border-[#CDE6DB] bg-[#F2FBF6]"
+                  : status === "current"
+                    ? "border-[#0A6E45] bg-white shadow-[var(--shadow-sm)]"
+                    : "border-[#E8E5DD] bg-white"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white ${
+                    status === "done" ? "bg-[#0A6E45]" : status === "current" ? "bg-[#0A6E45]" : "border border-[#D1CABD] bg-white"
+                  }`}
+                >
+                  {status === "done" ? (
+                    <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none">
+                      <path d="M3 6.5l2 2 4-4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : status === "current" ? (
+                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                  ) : (
+                    <span className="text-[10px] font-bold text-[#A8A29A]">{i + 1}</span>
+                  )}
+                </span>
+                <p className={`text-[12.5px] font-bold tracking-[-0.01em] ${status === "todo" ? "text-[#8A847B]" : "text-[#1B1916]"}`}>
+                  {s.label}
+                </p>
+              </div>
+              <p className="mt-1.5 pl-7 text-[11px] leading-[1.4] text-[#6B655C]">{s.sub}</p>
+              {status === "current" && (
+                <span className="mt-1.5 ml-7 inline-block rounded-full bg-[#E8F2EC] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.05em] text-[#0A6E45]">
+                  You&apos;re here
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 /* ── Country fact strip ───────────────────────────────────────────────── */
 
 function FactStrip({ country }: { country: CountryProfile }) {
@@ -432,7 +508,7 @@ function TimelineModule({ country }: { country: CountryProfile }) {
 
   return (
     <section className="mx-auto max-w-3xl">
-      <SectionEyebrow>Timeline &middot; {country.name}</SectionEyebrow>
+      <SectionEyebrow>Formalities &amp; timeline &middot; {country.name}</SectionEyebrow>
       <SectionTitle>From now to {intake.label}</SectionTitle>
       <p className="mt-2 text-[13.5px] leading-[1.65] text-[#6B655C]">
         Anchored to your most realistic next intake. Country-specific — UK UCAS, Aus CoE, Canada
@@ -469,6 +545,49 @@ function TimelineModule({ country }: { country: CountryProfile }) {
 }
 
 /* ── Universities ─────────────────────────────────────────────────────── */
+
+function uniInitials(name: string): string {
+  const stop = ["of", "the", "and", "for"];
+  const letters = name
+    .replace(/\(.*?\)/g, "")
+    .split(/\s+/)
+    .filter((w) => /^[A-Za-z]/.test(w) && !stop.includes(w.toLowerCase()))
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+  return letters || "U";
+}
+
+function UniLogo({ name, url }: { name: string; url: string }) {
+  const [failed, setFailed] = useState(false);
+  let host = "";
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    host = "";
+  }
+  if (failed || !host) {
+    return (
+      <span
+        aria-hidden
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[#F4F2EC] text-[12px] font-extrabold text-[#6B655C]"
+      >
+        {uniInitials(name)}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={`https://icons.duckduckgo.com/ip3/${host}.ico`}
+      alt=""
+      width={36}
+      height={36}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="h-9 w-9 shrink-0 rounded-[8px] border border-[#EFECE4] bg-white object-contain p-1"
+    />
+  );
+}
 
 function UniversitiesModule({
   student,
@@ -513,18 +632,21 @@ function UniversitiesModule({
               className="rounded-xl border border-[#E8E5DD] bg-white p-4 transition hover:border-[#A8A29A] hover:shadow-[var(--shadow-sm)]"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="text-[14px] font-bold leading-snug tracking-[-0.01em] text-[#1B1916]">
-                    {u.name}
-                  </h3>
-                  <p className="mt-0.5 text-[11.5px] text-[#6B655C]">{u.city}</p>
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <UniLogo name={u.name} url={u.official_url} />
+                  <div className="min-w-0">
+                    <h3 className="text-[14px] font-bold leading-snug tracking-[-0.01em] text-[#1B1916]">
+                      {u.name}
+                    </h3>
+                    <p className="mt-0.5 text-[11.5px] text-[#6B655C]">{u.city}</p>
+                  </div>
                 </div>
                 <FitBadge fit={fit} />
               </div>
 
               <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-[11.5px]">
                 <div>
-                  <dt className="text-[#8A847B]">Tuition / yr</dt>
+                  <dt className="text-[#8A847B]">Int&apos;l tuition / yr</dt>
                   <dd className="font-semibold text-[#1B1916]">
                     {currencySymbol(u.tuition_currency)}
                     {(u.tuition_min / 1000).toFixed(0)}k–{(u.tuition_max / 1000).toFixed(0)}k
@@ -962,6 +1084,7 @@ export default function DashboardPage() {
       <article className="mx-auto max-w-3xl px-5 pb-20 pt-6 sm:px-8">
         <div className="flex flex-col gap-14 sm:gap-16">
           <HeroModule student={student} docs={documents} country={countryProfile} onSendQuery={onSendQuery} />
+          <ProgressModule student={student} docs={documents} />
           <FactStrip country={countryProfile} />
           <TimelineModule country={countryProfile} />
           <UniversitiesModule student={student} country={activeCountry} onSendQuery={onSendQuery} />
