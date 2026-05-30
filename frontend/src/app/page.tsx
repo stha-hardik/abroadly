@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GoogleSignInButton } from "./google-sign-in-button";
+import { HeroIntentForm } from "./hero-intent-form";
 import { NavBar } from "./nav-bar";
 import { SiteFooter } from "./site-footer";
 
@@ -143,10 +143,7 @@ export default function Home() {
             </p>
 
             <div className="ab-fade-up ab-d4 mt-9 flex flex-col items-start gap-4">
-              <GoogleSignInButton
-                label="Start free with Google"
-                caption="Save your study profile once"
-              />
+              <HeroIntentForm />
               <Link
                 href="#how-it-works"
                 className="ab-focus group inline-flex items-center gap-1.5 rounded text-[13.5px] font-semibold text-[var(--ab-muted)] underline-offset-4 hover:text-[var(--ab-ink)] hover:underline"
