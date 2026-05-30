@@ -1422,10 +1422,12 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={grantCounselorCall}
-              className="ab-focus mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-[#E8E5DD] bg-white py-2 text-[12px] font-semibold text-[#1B1916] transition hover:border-[#0A6E45] hover:text-[#0A6E45]"
+              className="ab-focus mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[#0A6E45] bg-[#0A6E45] px-3 py-2.5 text-[12.5px] font-bold text-white shadow-[0_8px_18px_rgba(10,110,69,0.22)] transition hover:-translate-y-0.5 hover:bg-[#075B39] hover:shadow-[0_10px_22px_rgba(10,110,69,0.26)] active:translate-y-0"
             >
-              <PhoneIcon />
-              Request a call
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15">
+                <PhoneIcon />
+              </span>
+              <span>Request a call</span>
             </button>
           )}
         </section>
