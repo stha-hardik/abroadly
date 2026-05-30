@@ -26,7 +26,7 @@ export interface StudentCreate {
 
 export interface CompleteProfilePayload {
   full_name: string;
-  phone?: string;
+  phone: string;
   location?: string;
   education_level: EducationLevel;
   gpa?: number;
@@ -34,6 +34,18 @@ export interface CompleteProfilePayload {
   target_countries: string[];
   goals?: string;
   preferred_field?: string;
+}
+
+export interface StudentUpdatePayload {
+  full_name?: string;
+  phone?: string;
+  location?: string | null;
+  education_level?: EducationLevel;
+  gpa?: number | null;
+  expected_gpa?: number | null;
+  target_countries?: string[];
+  goals?: string | null;
+  preferred_field?: string | null;
 }
 
 export interface StudentOut {
@@ -50,6 +62,7 @@ export interface StudentOut {
   preferred_field: string | null;
   ai_paused: boolean;
   profile_completed: boolean;
+  call_consent: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -142,6 +155,19 @@ export async function createStudent(payload: StudentCreate): Promise<StudentOut>
 
 export async function getStudent(id: string): Promise<StudentOut> {
   return handle<StudentOut>(await fetch(`${BASE}/students/${id}`));
+}
+
+export async function updateStudent(
+  id: string,
+  payload: StudentUpdatePayload
+): Promise<StudentOut> {
+  return handle<StudentOut>(
+    await fetch(`${BASE}/students/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+  );
 }
 
 export async function getCurrentStudent(): Promise<StudentOut> {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { GoogleSignInButton } from "./google-sign-in-button";
+import { NavBar } from "./nav-bar";
 import { SiteFooter } from "./site-footer";
-import { googleLoginUrl } from "@/lib/api";
 
 const assurances = ["Free for students", "No agency pressure", "Built for Nepali questions"];
 
@@ -99,47 +99,6 @@ function GhostButton({
   return <Link href={href} className={cls}>{children}</Link>;
 }
 
-function NavBar() {
-  return (
-    <header className="sticky top-0 z-50 border-b border-[var(--ab-line)]/70 bg-[var(--ab-paper)]/80 backdrop-blur-xl">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5 sm:px-8">
-        <Link href="/" className="ab-focus flex items-center gap-2.5 rounded-lg">
-          <img src="/images/abroadly-logo.png" alt="Abroadly" className="h-8 w-8 rounded-lg" />
-          <span className="text-[17px] font-extrabold tracking-[-0.02em] text-[var(--ab-ink)]">Abroadly</span>
-        </Link>
-
-        <div className="hidden items-center gap-1 md:flex">
-          {[
-            ["How it works", "#how-it-works"],
-            ["What it helps with", "#student-problems"],
-            ["Topics", "#topics"],
-          ].map(([label, href]) => (
-            <a
-              key={href}
-              href={href}
-              className="ab-focus rounded-lg px-3 py-2 text-[14px] font-semibold text-[var(--ab-ink-soft)] transition hover:bg-[#F0EDE4] hover:text-[var(--ab-ink)]"
-            >
-              {label}
-            </a>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          <a
-            href={googleLoginUrl()}
-            className="ab-focus hidden rounded-lg px-3 py-2 text-[14px] font-semibold text-[var(--ab-ink-soft)] transition hover:bg-[#F0EDE4] hover:text-[var(--ab-ink)] sm:inline-flex"
-          >
-            Sign in
-          </a>
-          <PrimaryButton href="/onboarding" className="h-9 px-4 text-[13.5px]">
-            Get started free
-          </PrimaryButton>
-        </div>
-      </nav>
-    </header>
-  );
-}
-
 function ChatPreview() {
   return (
     <div className="ab-fade-up ab-d5 relative mx-auto mt-14 max-w-3xl sm:mt-16">
@@ -192,7 +151,13 @@ function ChatPreview() {
 export default function Home() {
   return (
     <main className="min-h-screen bg-[var(--ab-paper)] text-[var(--ab-ink)]">
-      <NavBar />
+      <NavBar
+        sectionLinks={[
+          ["How it works", "#how-it-works"],
+          ["What it helps with", "#student-problems"],
+          ["Topics", "#topics"],
+        ]}
+      />
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section className="ab-dot-grid relative overflow-hidden">

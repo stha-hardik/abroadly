@@ -80,7 +80,7 @@ export default function ProfileDetailsPage() {
       .then((current) => {
         if (cancelled) return;
         localStorage.setItem("abroadly_student_id", current.id);
-        if (current.profile_completed) {
+        if (current.profile_completed && current.phone?.trim()) {
           router.replace("/chat");
           return;
         }
@@ -110,6 +110,7 @@ export default function ProfileDetailsPage() {
   const progress = useMemo(() => {
     const checks = [
       form.full_name.trim(),
+      form.phone.trim(),
       form.education_level,
       form.gpa.trim() || form.expected_gpa.trim(),
       form.target_countries.length > 0,
@@ -142,6 +143,7 @@ export default function ProfileDetailsPage() {
     const expectedGpa = optionalNumber(form.expected_gpa);
 
     if (!form.full_name.trim()) next.full_name = "Full name is required.";
+    if (!form.phone.trim()) next.phone = "Phone number is required.";
     if (Number.isNaN(gpa) || (gpa !== undefined && (gpa < 0 || gpa > 4.5))) {
       next.gpa = "Use a GPA between 0 and 4.5.";
     }
@@ -168,7 +170,7 @@ export default function ProfileDetailsPage() {
     try {
       const updated = await completeGoogleProfile({
         full_name: form.full_name.trim(),
-        ...(form.phone.trim() ? { phone: form.phone.trim() } : {}),
+        phone: form.phone.trim(),
         ...(form.location.trim() ? { location: form.location.trim() } : {}),
         education_level: form.education_level,
         ...(form.gpa.trim() ? { gpa: Number(form.gpa) } : {}),
@@ -325,15 +327,19 @@ export default function ProfileDetailsPage() {
 
             <div>
               <label className={labelClass} htmlFor="phone">
-                Phone
+                Phone <span className="text-[#b42318]">*</span>
               </label>
               <input
                 id="phone"
+                type="tel"
+                required
+                autoComplete="tel"
                 className={inputClass}
                 value={form.phone}
                 onChange={(e) => setField("phone", e.target.value)}
                 placeholder="+977 98XXXXXXXX"
               />
+              {errors.phone && <p className={errorClass}>{errors.phone}</p>}
             </div>
 
             <div>

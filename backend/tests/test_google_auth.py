@@ -42,3 +42,11 @@ async def test_google_profile_requires_verified_email():
 
     assert exc.value.status_code == 400
     assert exc.value.detail == "google_email_not_verified"
+
+
+def test_complete_profile_requires_non_blank_phone():
+    with pytest.raises(HTTPException) as exc:
+        auth._clean_required_text("   ", "phone_required")
+
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "phone_required"
